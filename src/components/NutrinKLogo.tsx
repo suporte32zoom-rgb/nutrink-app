@@ -14,10 +14,10 @@ export const NutrinKLogo: React.FC<NutrinKLogoProps> = ({
   className = ''
 }) => {
   const sizeMap = {
-    sm: { iconSize: 24, textSize: 'text-base', gap: 'gap-2' },
-    md: { iconSize: 32, textSize: 'text-xl', gap: 'gap-2.5' },
-    lg: { iconSize: 48, textSize: 'text-3xl', gap: 'gap-3.5' },
-    xl: { iconSize: 72, textSize: 'text-5xl', gap: 'gap-4' }
+    sm: { iconSize: 24, textSize: 'text-base', gap: 'gap-2', iconClass: 'w-6 h-6' },
+    md: { iconSize: 32, textSize: 'text-base sm:text-xl', gap: 'gap-2 sm:gap-2.5', iconClass: 'w-6 h-6 sm:w-8 sm:h-8' },
+    lg: { iconSize: 48, textSize: 'text-3xl', gap: 'gap-3.5', iconClass: 'w-12 h-12' },
+    xl: { iconSize: 72, textSize: 'text-5xl', gap: 'gap-4', iconClass: 'w-[72px] h-[72px]' }
   };
 
   const currentSize = sizeMap[size];
@@ -25,14 +25,14 @@ export const NutrinKLogo: React.FC<NutrinKLogoProps> = ({
   return (
     <div className={`inline-flex items-center ${currentSize.gap} select-none ${className}`}>
       {/* Monogram NK SVG */}
-      <div className={`relative flex items-center justify-center ${withGlow ? 'filter drop-shadow-[0_0_14px_rgba(217,70,239,0.85)]' : ''}`}>
+      <div className={`relative flex items-center justify-center shrink-0 flex-shrink-0 ${withGlow ? 'filter drop-shadow-[0_0_14px_rgba(217,70,239,0.85)]' : ''}`}>
         <svg
           width={currentSize.iconSize}
           height={currentSize.iconSize}
           viewBox="0 0 100 100"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="transition-transform duration-300 hover:scale-105"
+          className={`${currentSize.iconClass} transition-transform duration-300 hover:scale-105 shrink-0 flex-shrink-0`}
         >
           {/* Neon Gradient Definition */}
           <defs>

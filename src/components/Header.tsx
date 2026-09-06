@@ -82,28 +82,28 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header 
-      className="bg-[#120326] text-white border-b border-purple-900/50 sticky top-0 shadow-lg shadow-purple-950/40 pt-2 sm:pt-3 pb-2 sm:pb-3 px-3 sm:px-6 lg:px-8 transition-all"
+      className="bg-[#120326] text-white border-b border-purple-900/50 sticky top-0 shadow-lg shadow-purple-950/40 pt-2 sm:pt-3 pb-2 sm:pb-3 px-2 sm:px-6 lg:px-8 transition-all overflow-x-hidden"
       style={{ zIndex: 1000 }}
     >
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between gap-2 sm:gap-4 min-h-[3.25rem]">
+      <div className="max-w-7xl mx-auto w-full overflow-x-hidden">
+        <div className="flex items-center justify-between w-full overflow-x-hidden gap-1 sm:gap-3 min-h-[3rem] sm:min-h-[3.25rem]">
           
           {/* Mobile Hamburger Menu Button (z-index: 1000) */}
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(prev => !prev)}
             style={{ zIndex: 1000 }}
-            className="md:hidden p-2 rounded-xl bg-[#220743] hover:bg-[#2e0b59] text-purple-200 hover:text-white border border-purple-700/60 transition-all flex items-center justify-center cursor-pointer shrink-0"
+            className="md:hidden p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-[#220743] hover:bg-[#2e0b59] text-purple-200 hover:text-white border border-purple-700/60 transition-all flex items-center justify-center cursor-pointer shrink-0 flex-shrink-0"
             aria-label="Abrir Menu de Navegação"
             title="Menu Principal"
             id="btn-header-hamburger-menu"
           >
-            {isMobileMenuOpen ? <X className="w-5 h-5 text-fuchsia-400" /> : <Menu className="w-5 h-5 text-purple-200" />}
+            {isMobileMenuOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5 text-fuchsia-400" /> : <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-purple-200" />}
           </button>
 
-          {/* Official NutrinK Original Logo with NUTRIA indicator */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <NutrinKLogo size="md" withGlow={true} className="shrink-0" />
+          {/* Official NutrinK Original Logo: [Ícone NK] [Nutrink] */}
+          <div className="flex items-center gap-2 shrink-0 flex-shrink-0">
+            <NutrinKLogo size="md" withGlow={true} className="shrink-0 flex-shrink-0" />
             
             {/* Plan Badge (Desktop/Tablet) */}
             {isFree ? (
@@ -151,27 +151,28 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Quick Action Buttons & User Header Identity */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2.5 shrink-0 flex-shrink-0">
             
             {/* Botão de Destaque Superior: FAZER UPGRADE / PLANOS E ASSINATURAS */}
             {onOpenSubscriptionModal && (
               <button
                 type="button"
                 onClick={onOpenSubscriptionModal}
-                className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-black rounded-xl transition-all shadow-lg active:scale-95 shrink-0 border bg-gradient-to-r from-amber-400 via-amber-300 to-fuchsia-500 hover:from-amber-300 hover:to-fuchsia-400 text-slate-950 border-amber-200/90 shadow-amber-950/50 hover:shadow-amber-500/30 ring-2 ring-amber-400/60 animate-pulse hover:animate-none"
+                className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-black rounded-lg sm:rounded-xl transition-all shadow-md active:scale-95 shrink-0 flex-shrink-0 border bg-gradient-to-r from-amber-400 via-amber-300 to-fuchsia-500 hover:from-amber-300 hover:to-fuchsia-400 text-slate-950 border-amber-200/90 shadow-amber-950/50 hover:shadow-amber-500/30 ring-1 sm:ring-2 ring-amber-400/60 animate-pulse hover:animate-none"
                 title="Ver Planos e Assinaturas - Fazer Upgrade"
                 id="btn-header-upgrade-cta"
               >
-                <Crown className="w-4 h-4 text-slate-950 fill-slate-950 shrink-0" />
-                <span className="font-black tracking-tight">Fazer Upgrade</span>
-                <Sparkles className="w-3.5 h-3.5 text-slate-950 hidden sm:inline-block shrink-0" />
+                <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950 fill-slate-950 shrink-0" />
+                <span className="hidden sm:inline font-black tracking-tight">Fazer Upgrade</span>
+                <span className="sm:hidden font-black text-[11px] tracking-tight">Upgrade</span>
+                <Sparkles className="w-3.5 h-3.5 text-slate-950 hidden md:inline-block shrink-0" />
               </button>
             )}
 
             <button
               type="button"
               onClick={onOpenNewPatient}
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#220743] hover:bg-[#2e0b59] text-purple-100 border border-purple-700/60 rounded-xl transition-all shadow-sm hover:border-fuchsia-400/50"
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#220743] hover:bg-[#2e0b59] text-purple-100 border border-purple-700/60 rounded-xl transition-all shadow-sm hover:border-fuchsia-400/50 shrink-0 flex-shrink-0"
               title="Cadastrar Novo Paciente"
             >
               <UserPlus className="w-3.5 h-3.5 text-fuchsia-300" />
@@ -181,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onOpenNewAppointment}
-              className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#220743] hover:bg-[#2e0b59] text-purple-100 border border-purple-700/60 rounded-xl transition-all shadow-sm hover:border-fuchsia-400/50"
+              className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#220743] hover:bg-[#2e0b59] text-purple-100 border border-purple-700/60 rounded-xl transition-all shadow-sm hover:border-fuchsia-400/50 shrink-0 flex-shrink-0"
               title="Agendar Consulta"
             >
               <Calendar className="w-3.5 h-3.5 text-purple-300" />
@@ -192,15 +193,15 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onOpenNutriaChat}
-              className="relative inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 hover:from-fuchsia-500 hover:to-purple-500 text-white text-xs font-bold shadow-md shadow-fuchsia-950/50 transition-all transform hover:scale-[1.03] active:scale-[0.98] border border-fuchsia-400/40 shrink-0"
+              className="relative inline-flex items-center justify-center gap-1 sm:gap-2 px-2 py-1 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 hover:from-fuchsia-500 hover:to-purple-500 text-white text-xs font-bold shadow-md shadow-fuchsia-950/50 transition-all transform hover:scale-[1.03] active:scale-[0.98] border border-fuchsia-400/40 shrink-0 flex-shrink-0"
               title="Falar com Copiloto IA NUTRIA"
               id="btn-header-nutria-chat"
             >
-              <Bot className="w-4 h-4 text-fuchsia-100 shrink-0" />
+              <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-fuchsia-100 shrink-0" />
               <span className="hidden sm:inline">NUTRIA</span>
-              <span className="flex h-2 w-2 relative shrink-0">
+              <span className="flex h-1.5 w-1.5 sm:h-2 sm:w-2 relative shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-300 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-fuchsia-200"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-fuchsia-200"></span>
               </span>
             </button>
 
@@ -209,11 +210,11 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenProfileModal}
-                className="flex items-center gap-1.5 sm:gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-[#220743] hover:bg-[#2e0b59] border border-purple-700/60 text-purple-200 hover:text-white transition-all shadow-sm group shrink-0"
+                className="flex items-center gap-1 sm:gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#220743] hover:bg-[#2e0b59] border border-purple-700/60 text-purple-200 hover:text-white transition-all shadow-sm group shrink-0 flex-shrink-0"
                 title={`Profissional: ${userAccount.name} • ${userAccount.crn} • ${userAccount.specialty} • Plano: ${planLabel}`}
                 id="btn-header-user-profile"
               >
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-fuchsia-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm border border-fuchsia-400/30 shrink-0">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-tr from-fuchsia-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm border border-fuchsia-400/30 shrink-0 flex-shrink-0">
                   {userAccount.name.charAt(0)}
                 </div>
                 
@@ -236,19 +237,19 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
 
-                <ChevronDown className="w-3.5 h-3.5 text-purple-400 group-hover:text-fuchsia-300 transition-transform shrink-0" />
+                <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-400 group-hover:text-fuchsia-300 transition-transform shrink-0 flex-shrink-0" />
               </button>
             ) : onOpenLoginModal ? (
               <button
                 type="button"
                 onClick={onOpenLoginModal}
-                className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 border border-purple-500/50 transition-all shadow-md shrink-0 active:scale-95"
+                className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 border border-purple-500/50 transition-all shadow-md shrink-0 flex-shrink-0 active:scale-95"
                 title="Cadastrar ou acessar sua conta profissional"
                 id="btn-header-login-prompt"
               >
-                <LogIn className="w-3.5 h-3.5 text-fuchsia-300 shrink-0" />
+                <LogIn className="w-3.5 h-3.5 text-fuchsia-300 shrink-0 flex-shrink-0" />
                 <span className="hidden sm:inline">Entrar / Cadastrar</span>
-                <span className="sm:hidden font-bold text-[11px]">Entrar</span>
+                <span className="sm:hidden font-bold text-xs">Entrar</span>
               </button>
             ) : null}
 
@@ -257,10 +258,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenLoginModal}
-                className="hidden 2xl:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-purple-300 hover:text-white bg-[#1b0537] hover:bg-[#27084e] border border-purple-800/50 transition-all shrink-0"
+                className="hidden 2xl:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-purple-300 hover:text-white bg-[#1b0537] hover:bg-[#27084e] border border-purple-800/50 transition-all shrink-0 flex-shrink-0"
                 title="Acessar outra conta / Cadastrar novo profissional"
               >
-                <LogIn className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <LogIn className="w-3.5 h-3.5 text-purple-400 shrink-0 flex-shrink-0" />
                 <span>Trocar</span>
               </button>
             )}
