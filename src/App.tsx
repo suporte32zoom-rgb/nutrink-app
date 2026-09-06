@@ -354,20 +354,52 @@ Seu consultório foi inicializado com sucesso (${newUser.crn} • ${newUser.spec
   // Floating AI Chat
   const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
 
-  // NUTRIA AI Conversation State
-  const [nutriaMessages, setNutriaMessages] = useState<NutriaMessage[]>([
-    {
-      id: 'msg-init-1',
-      role: 'assistant',
-      content: `Olá, Doutor(a)! Eu sou a **NUTRIA**, sua inteligência operacional e copiloto clínico no ecossistema NutrinK.
+  const DEFAULT_NUTRIA_WELCOME: NutriaMessage = {
+    id: 'msg-init-1',
+    role: 'assistant',
+    content: `Olá, Doutor(a)! Eu sou a **NUTRIA**, sua inteligência operacional e copiloto clínico no ecossistema NutrinK.
 
 Como posso otimizar sua rotina hoje? Você pode me solicitar:
 - **Operacional**: *"Cadastre um novo paciente chamado Rodrigo, 32 anos, 80kg"*, *"Agende consulta para amanhã às 15h"*, *"Lance uma receita de R$ 350 via PIX"*.
 - **Clínico**: *"Calcule a TMB e GET de um paciente de 75kg e 178cm"*, *"Sugira o cardápio e aporte de proteína para hipertrofia"*, *"Interprete os exames de ferritina e B12"*.
 - **Planos**: *"Quais são os planos de assinatura do NutrinK?"*`,
-      timestamp: '08:00'
+    timestamp: '08:00'
+  };
+
+  // NUTRIA AI Conversation State (Sincronizado no estado local do React e LocalStorage para resposta imediata)
+  const [nutriaMessages, setNutriaMessages] = useState<NutriaMessage[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('nutrink_nutria_conversation_history');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao restaurar histórico de conversas da NUTRIA:', err);
+      }
     }
-  ]);
+    return [DEFAULT_NUTRIA_WELCOME];
+  });
+
+  // Sincronização automática contínua do estado de conversa no navegador
+  useEffect(() => {
+    if (typeof window !== 'undefined' && nutriaMessages.length > 0) {
+      try {
+        localStorage.setItem('nutrink_nutria_conversation_history', JSON.stringify(nutriaMessages));
+      } catch {}
+    }
+  }, [nutriaMessages]);
+
+  const handleClearNutriaHistory = () => {
+    setNutriaMessages([DEFAULT_NUTRIA_WELCOME]);
+    try {
+      localStorage.setItem('nutrink_nutria_conversation_history', JSON.stringify([DEFAULT_NUTRIA_WELCOME]));
+    } catch {}
+  };
+
   const [isNutriaLoading, setIsNutriaLoading] = useState(false);
 
   // Selected Patient object
@@ -845,6 +877,7 @@ Seu acesso ao **Plano ${plan === 'premium_anual' ? 'Premium Anual (R$ 399,00 à 
               userAccount={effectiveUserAccount}
               onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
               onOpenLoginModal={(tab) => handleOpenLoginModal(tab || 'register')}
+              onClearMessages={handleClearNutriaHistory}
             />
           </div>
         )}
@@ -895,6 +928,7 @@ Seu acesso ao **Plano ${plan === 'premium_anual' ? 'Premium Anual (R$ 399,00 à 
             userAccount={effectiveUserAccount}
             onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
             onOpenLoginModal={(tab) => handleOpenLoginModal(tab || 'register')}
+            onClearMessages={handleClearNutriaHistory}
           />
         </div>
       )}

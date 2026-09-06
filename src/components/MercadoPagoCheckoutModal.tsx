@@ -24,6 +24,7 @@ import confetti from 'canvas-confetti';
 import { SubscriptionPlan, UserAccount } from '../types';
 import { MercadoPagoLogo } from './MercadoPagoLogo';
 import { safeFetchJson } from '../utils/api';
+import { createCardTokenClient, getMercadoPagoClient } from '../services/mercadoPagoClient';
 
 interface MercadoPagoCheckoutModalProps {
   isOpen: boolean;
@@ -147,6 +148,15 @@ export const MercadoPagoCheckoutModal: React.FC<MercadoPagoCheckoutModalProps> =
         });
       });
   }, [isOpen]);
+
+  // Initialize MercadoPago.js frontend SDK when config is ready
+  useEffect(() => {
+    if (paymentConfig?.publicKey) {
+      getMercadoPagoClient(paymentConfig.publicKey).catch((err) => {
+        console.warn('[MercadoPago.js] Inicialização do SDK no modal:', err);
+      });
+    }
+  }, [paymentConfig]);
 
   // Generate PIX and Preference when modal opens or plan changes
   useEffect(() => {
@@ -300,10 +310,32 @@ export const MercadoPagoCheckoutModal: React.FC<MercadoPagoCheckoutModalProps> =
     setIsProcessingCard(true);
 
     try {
+      // 1. Captura de token do cartão de crédito via MercadoPago.js diretamente no cliente
+      let clientToken: string | undefined = undefined;
+      try {
+        const tokenRes = await createCardTokenClient({
+          cardNumber: cleanNumber,
+          cardholderName: cardholderName.trim(),
+          cardExpirationMonth: expMonth,
+          cardExpirationYear: expYear.length === 2 ? `20${expYear}` : expYear,
+          securityCode: cleanCvv,
+          identificationType: 'CPF',
+          identificationNumber: cleanCpf
+        }, paymentConfig?.publicKey);
+
+        if (tokenRes && tokenRes.id) {
+          clientToken = tokenRes.id;
+        }
+      } catch (tokenErr) {
+        console.warn('[MercadoPago.js] Tokenização no cliente avisou fallback:', tokenErr);
+      }
+
+      // 2. Processa a transação enviando o token gerado pelo SDK do frontend
       const response = await safeFetchJson<any>('/api/payments/process-card', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          token: clientToken,
           cardNumber: cleanNumber,
           cardholderName: cardholderName.trim(),
           cardExpirationMonth: expMonth,

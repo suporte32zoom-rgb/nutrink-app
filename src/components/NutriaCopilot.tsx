@@ -47,6 +47,7 @@ interface NutriaCopilotProps {
   onOpenSubscriptionModal?: () => void;
   onOpenLoginModal?: (tab?: 'login' | 'register') => void;
   onActionExecuted?: (action: any) => void;
+  onClearMessages?: () => void;
 }
 
 const DEFAULT_WELCOME_MESSAGE: NutriaMessage = {
@@ -72,7 +73,8 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
   userAccount,
   onOpenSubscriptionModal,
   onOpenLoginModal,
-  onActionExecuted
+  onActionExecuted,
+  onClearMessages
 }) => {
   // Estado local gerenciado das mensagens da conversa
   const [messages, setMessages] = useState<NutriaMessage[]>(() => {
@@ -92,16 +94,10 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
 
   const isLoading = internalLoading || externalLoading;
 
-  // Sincroniza mensagens externas se o pai enviar novas mensagens (ex: ativação de plano ou boas-vindas)
+  // Sincroniza mensagens externas imediatamente com o estado local
   useEffect(() => {
-    if (initialMessages && initialMessages.length > 0) {
-      // Se a contagem externa for maior que a local, atualiza
-      setMessages(prev => {
-        if (initialMessages.length > prev.length) {
-          return initialMessages;
-        }
-        return prev;
-      });
+    if (initialMessages) {
+      setMessages(initialMessages);
     }
   }, [initialMessages]);
 
@@ -389,15 +385,32 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
           </div>
         </div>
 
-        {isFloating && onCloseFloating && (
+        <div className="flex items-center gap-1.5">
           <button
-            onClick={onCloseFloating}
-            className="p-1.5 text-purple-300 hover:text-white rounded-xl hover:bg-[#250847] text-sm font-bold cursor-pointer transition-all"
-            title="Fechar chat flutuante"
+            onClick={() => {
+              if (onClearMessages) {
+                onClearMessages();
+              } else {
+                setMessages([DEFAULT_WELCOME_MESSAGE]);
+              }
+            }}
+            className="p-1.5 text-purple-300 hover:text-white rounded-xl hover:bg-[#250847] text-xs font-semibold flex items-center gap-1 cursor-pointer transition-all border border-purple-800/40"
+            title="Iniciar nova conversa e limpar histórico local"
           >
-            ✕
+            <RefreshCw className="w-3.5 h-3.5 text-fuchsia-400" />
+            <span className="hidden sm:inline text-[10px]">Nova Conversa</span>
           </button>
-        )}
+
+          {isFloating && onCloseFloating && (
+            <button
+              onClick={onCloseFloating}
+              className="p-1.5 text-purple-300 hover:text-white rounded-xl hover:bg-[#250847] text-sm font-bold cursor-pointer transition-all"
+              title="Fechar chat flutuante"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Quick Clinical Shortcuts Strip */}
