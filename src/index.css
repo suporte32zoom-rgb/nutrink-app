@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  touch-action: pan-x pan-y;
+  overflow-x: hidden;
+  max-width: 100vw;
+  -webkit-text-size-adjust: 100%;
+}
+
+@layer base {
+  body {
+    background-color: #0c0217;
+    color: #f8fafc;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  header {
+    padding-top: max(0.625rem, env(safe-area-inset-top, 0.625rem));
+  }
+}
+
+/* NutrinK Original Theme Custom Styles */
+.bg-nutrink-gradient {
+  background: radial-gradient(circle at 50% 20%, #4a0470 0%, #20043c 45%, #0d011c 100%);
+}
+
+.bg-nutrink-hero {
+  background: linear-gradient(135deg, #1f0436 0%, #3b075e 50%, #150226 100%);
+}
+
+.bg-nutrink-card {
+  background-color: #17042c;
+  border-color: rgba(168, 85, 247, 0.2);
+}
+
+.bg-nutrink-card-hover:hover {
+  background-color: #21073e;
+  border-color: rgba(217, 70, 239, 0.4);
+}
+
+.nutrink-glow {
+  box-shadow: 0 0 25px -5px rgba(192, 38, 211, 0.45);
+}
+
+.nutrink-glow-sm {
+  box-shadow: 0 0 15px -3px rgba(168, 85, 247, 0.35);
+}
+
+.nutrink-border-glow {
+  border: 1px solid rgba(217, 70, 239, 0.35);
+  box-shadow: inset 0 0 15px -5px rgba(192, 38, 211, 0.2);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #110222;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #6b21a8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9333ea;
+}

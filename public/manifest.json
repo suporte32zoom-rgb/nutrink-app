@@ -1,0 +1,70 @@
+{
+  "name": "NutrinK • Software Clínico para Nutricionistas e Nutrólogos",
+  "short_name": "NutrinK",
+  "description": "Plataforma clínica completa para nutricionistas e nutrólogos. Prontuário inteligente, cálculos TMB/GET e Copiloto NUTRIA AI.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "id": "nutrink-app",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#120326",
+  "theme_color": "#120326",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": [
+    "medical",
+    "health",
+    "productivity",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "48x48 72x72 96x96 128x128 256x256",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Prontuários & Pacientes",
+      "short_name": "Pacientes",
+      "description": "Acessar prontuários eletrônicos e histórico clínico",
+      "url": "/?tab=patients",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Agenda de Consultas",
+      "short_name": "Agenda",
+      "description": "Ver grade de horários e próximos atendimentos",
+      "url": "/?tab=calendar",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "NutriCalc Pro (Cálculos TMB)",
+      "short_name": "NutriCalc",
+      "description": "Calculadora energética Harris-Benedict e Mifflin-St Jeor",
+      "url": "/?tab=nutricalc",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Copiloto NUTRIA AI",
+      "short_name": "NUTRIA AI",
+      "description": "Abrir copiloto inteligente de nutrição clínica",
+      "url": "/?openNutria=true",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    }
+  ]
+}

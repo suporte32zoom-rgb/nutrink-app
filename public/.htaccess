@@ -1,0 +1,63 @@
+# ==============================================================================
+# NutrinK - Hostinger & Apache / LiteSpeed Server Configuration
+# Configuração para SPA (Single Page Application) e Compatibilidade de API
+# ==============================================================================
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Repassar o cabeçalho Authorization para o Node.js / PHP
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # 2. Não reescrever chamadas de API se o backend Node estiver ativo
+  # Se uma rota /api/ não existir, ela não deve cair no index.html retornando HTML para chamadas AJAX/fetch
+  RewriteCond %{REQUEST_URI} ^/api/ [NC]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^api/(.*)$ - [L]
+
+  # 3. Fallback de rotas da aplicação frontend para index.html (SPA Routing)
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# ==============================================================================
+# Tipos MIME para JavaScript Moderno, WebP, SVGs e Fontes
+# ==============================================================================
+<IfModule mod_mime.c>
+  AddType application/javascript js mjs
+  AddType application/json json
+  AddType image/svg+xml svg svgz
+  AddType image/webp webp
+  AddType font/woff2 woff2
+  AddType font/woff woff
+  AddType font/ttf ttf
+</IfModule>
+
+# ==============================================================================
+# Cabeçalhos de Segurança e Iframe Embedding (Hostinger, WordPress, CMS)
+# ==============================================================================
+<IfModule mod_headers.c>
+  # Permitir incorporação em iframes a partir de qualquer domínio
+  Header unset X-Frame-Options
+  Header always set Content-Security-Policy "frame-ancestors *;"
+  
+  # CORS Universal para APIs
+  Header always set Access-Control-Allow-Origin "*"
+  Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+  Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Idempotency-Key"
+
+  # Caching otimizado para arquivos estáticos
+  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|webp)$">
+    Header set Cache-Control "max-age=31536000, public"
+  </FilesMatch>
+
+  # Prevenir cache do index.html para garantir atualizações imediatas
+  <FilesMatch "(index\.html|manifest\.json|sw\.js)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+  </FilesMatch>
+</IfModule>
