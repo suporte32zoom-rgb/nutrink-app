@@ -10,7 +10,7 @@ import { INSTITUTIONAL_PAGES } from "./src/data/institutionalPages";
 
 dotenv.config();
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 const app = express();
 
 // Iframe & Cross-Origin Embedding Configuration for all frontend/backend hostings (Hostinger, Next.js, Nuxt, Astro, Vue, React, Angular, SvelteKit, WordPress)
