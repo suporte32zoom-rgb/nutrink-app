@@ -329,16 +329,12 @@ const gerarPlanoAlimentarTool: FunctionDeclaration = {
 // API Endpoints
 app.get("/api/health", (req: Request, res: Response) => {
   const hasGemini = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 5);
-  const hasGroq = Boolean(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim().length > 5);
-  const hasOpenRouter = Boolean(process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim().length > 5);
 
   res.json({ 
     status: "ok", 
-    aiReady: hasGemini || hasGroq || hasOpenRouter,
+    aiReady: hasGemini,
     providers: {
-      gemini: hasGemini,
-      groq: hasGroq,
-      openrouter: hasOpenRouter
+      gemini: hasGemini
     },
     brand: "NutrinK", 
     assistant: "NUTRIA" 
@@ -352,107 +348,6 @@ const GEMINI_MODELS = [
   "gemini-flash-latest",
   "gemini-3.1-flash-lite"
 ];
-
-// Helper: Call Groq Cloud (Llama 3.3 70B, Llama 3.1 8B, DeepSeek R1 Distill)
-async function callGroqChat(messages: { role: string; content: string }[], options: { jsonMode?: boolean; temperature?: number } = {}) {
-  const apiKey = (process.env.GROQ_API_KEY || "").trim();
-  if (!apiKey) throw new Error("GROQ_API_KEY não configurada");
-
-  const groqModels = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"];
-  let lastErr = null;
-
-  for (const model of groqModels) {
-    try {
-      console.log(`[NutrinK AI Engine] Tentando Groq com modelo: ${model}...`);
-      const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: options.temperature ?? 0.3,
-          max_tokens: 3500,
-          ...(options.jsonMode ? { response_format: { type: "json_object" } } : {})
-        })
-      });
-
-      if (resp.ok) {
-        const data: any = await resp.json();
-        const content = data.choices?.[0]?.message?.content || "";
-        if (content) {
-          console.log(`[NutrinK AI Engine] Sucesso com Groq (${model})!`);
-          return { content, provider: `groq (${model})` };
-        }
-      } else {
-        const errText = await resp.text();
-        console.warn(`[NutrinK AI Engine - Groq ${model} Error]:`, resp.status, errText);
-        lastErr = new Error(`Groq ${model} status ${resp.status}`);
-      }
-    } catch (err: any) {
-      console.warn(`[NutrinK AI Engine - Groq Exception ${model}]:`, err?.message || err);
-      lastErr = err;
-    }
-  }
-  throw lastErr || new Error("Falha ao comunicar com os modelos Groq");
-}
-
-// Helper: Call OpenRouter (Free Tier Models: Llama 3.3 70B, DeepSeek R1, Gemini 2.0 Flash)
-async function callOpenRouterChat(messages: { role: string; content: string }[], options: { jsonMode?: boolean; temperature?: number } = {}) {
-  const apiKey = (process.env.OPENROUTER_API_KEY || "").trim();
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY não configurada");
-
-  const openRouterModels = [
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "deepseek/deepseek-r1:free",
-    "google/gemini-2.0-flash-exp:free",
-    "mistralai/mistral-7b-instruct:free",
-    "meta-llama/llama-3.1-8b-instruct:free",
-    "openrouter/auto"
-  ];
-  let lastErr = null;
-
-  for (const model of openRouterModels) {
-    try {
-      console.log(`[NutrinK AI Engine] Tentando OpenRouter com modelo: ${model}...`);
-      const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-          "HTTP-Referer": process.env.APP_URL || "https://nutrink.com.br",
-          "X-Title": "NutriNK Copiloto Clínico"
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: options.temperature ?? 0.3,
-          max_tokens: 3500,
-          ...(options.jsonMode ? { response_format: { type: "json_object" } } : {})
-        })
-      });
-
-      if (resp.ok) {
-        const data: any = await resp.json();
-        const content = data.choices?.[0]?.message?.content || "";
-        if (content) {
-          console.log(`[NutrinK AI Engine] Sucesso com OpenRouter (${model})!`);
-          return { content, provider: `openrouter (${model})` };
-        }
-      } else {
-        const errText = await resp.text();
-        console.warn(`[NutrinK AI Engine - OpenRouter ${model} Error]:`, resp.status, errText);
-        lastErr = new Error(`OpenRouter ${model} status ${resp.status}`);
-      }
-    } catch (err: any) {
-      console.warn(`[NutrinK AI Engine - OpenRouter Exception ${model}]:`, err?.message || err);
-      lastErr = err;
-    }
-  }
-  throw lastErr || new Error("Falha ao comunicar com os modelos OpenRouter");
-}
 
 async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
   let lastError: any = null;
@@ -682,27 +577,11 @@ app.post("/api/nutria/chat", async (req: Request, res: Response) => {
   })), null, 2)}
 `;
 
-    // Format messages for Groq & OpenRouter compatibility
-    const standardChatMessages = [
-      {
-        role: "system",
-        content: NUTRIA_SYSTEM_INSTRUCTION + `\n\n` + contextSnippet + `\n\n[REGRA DE PRODUÇÃO REAL & BASE ZERADA]\n- O sistema opera em MODO DE PRODUÇÃO REAL.\n- Não existem pacientes pré-cadastrados fictícios. Se a lista de pacientes fornecida no contexto estiver vazia (total = 0) e a solicitação do usuário depender de um paciente cadastrado, oriente o profissional com: "Nenhum paciente cadastrado até o momento. Cadastre seu primeiro paciente no menu 'Pacientes & Prontuários' para que eu possa auxiliar na elaboração de condutas e planos alimentares."\n- Quando for solicitado relatório ou plano para um paciente real cadastrado, gere o documento clínico completo em Markdown puro com tabelas, sem tags HTML.`
-      },
-      ...(Array.isArray(conversationHistory) ? conversationHistory : []).slice(-6).map((m: any) => ({
-        role: m.role === 'user' ? 'user' : 'assistant',
-        content: String(m.content || "")
-      })),
-      {
-        role: "user",
-        content: message
-      }
-    ];
-
     let replyText = "";
     let actionExecuted: any = null;
     let successfulProvider = "";
 
-    // 1. TENTATIVA COM GOOGLE GEMINI (Multi-Modelos)
+    // 1. EXECUÇÃO EXCLUSIVA COM GOOGLE GEMINI (Multi-Modelos Oficiais)
     if (ai) {
       try {
         const contents: any[] = [
@@ -884,37 +763,11 @@ Solicitação do usuário: ${message}`
 
         successfulProvider = "gemini";
       } catch (geminiError: any) {
-        console.warn("[NutrinK AI Waterfall] Gemini indisponível ou limite atingido. Passando para provedores alternativos...", geminiError?.message || geminiError);
+        console.warn("[NutrinK AI] Instabilidade no Google Gemini. Acionando motor de contingência clínica...", geminiError?.message || geminiError);
       }
     }
 
-    // 2. TENTATIVA COM GROQ CLOUD (Llama 3.3 70B / Llama 3.1 8B)
-    if (!replyText && process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim().length > 5) {
-      try {
-        const groqResult = await callGroqChat(standardChatMessages);
-        if (groqResult && groqResult.content) {
-          replyText = groqResult.content;
-          successfulProvider = groqResult.provider;
-        }
-      } catch (groqError: any) {
-        console.warn("[NutrinK AI Waterfall] Groq falhou. Tentando próximo provedor...", groqError?.message || groqError);
-      }
-    }
-
-    // 3. TENTATIVA COM OPENROUTER (Modelos Gratuitos / Abertos)
-    if (!replyText && process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim().length > 5) {
-      try {
-        const openRouterResult = await callOpenRouterChat(standardChatMessages);
-        if (openRouterResult && openRouterResult.content) {
-          replyText = openRouterResult.content;
-          successfulProvider = openRouterResult.provider;
-        }
-      } catch (orError: any) {
-        console.warn("[NutrinK AI Waterfall] OpenRouter falhou. Acionando gerador clínico de contingência...", orError?.message || orError);
-      }
-    }
-
-    // 4. CONTINGÊNCIA CLÍNICA DETERMINÍSTICA (NUNCA DEIXA O USUÁRIO NA MÃO)
+    // 2. CONTINGÊNCIA CLÍNICA DETERMINÍSTICA (NUNCA DEIXA O USUÁRIO NA MÃO)
     if (!replyText || replyText.trim().length < 20) {
       if (isClinicalReportRequest) {
         replyText = generateDetailedClinicalReportFallback(targetPatient, message);
