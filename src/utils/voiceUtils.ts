@@ -1,4 +1,12 @@
 import { Patient, Gender, PatientObjective } from '../types';
+import {
+  calculateBMI,
+  calculateMifflinTMB,
+  calculateGET,
+  calculateWaterRecommendation,
+  normalizeHeightToCm,
+  normalizeHeightToMeters
+} from './nutritionCalculations';
 
 /**
  * Clean markdown and technical syntax into smooth, natural spoken Portuguese text.
@@ -234,7 +242,7 @@ export function extractPatientFromVoiceOrText(input: string): ExtractedPatientRe
   }
 
   // 2. Age extraction
-  let age = 30;
+  let age = 0;
   const ageMatch = lower.match(/(\d{1,3})\s*(?:anos|ano|a\.?|de idade)/i) || lower.match(/idade\s*(?:de|:)?\s*(\d{1,3})/i);
   if (ageMatch && ageMatch[1]) {
     age = parseInt(ageMatch[1], 10);
@@ -260,7 +268,7 @@ export function extractPatientFromVoiceOrText(input: string): ExtractedPatientRe
   }
 
   // 4. Weight extraction (kg)
-  let weightKg = 70;
+  let weightKg = 0;
   const weightMatch = lower.match(/(\d{2,3}(?:[.,]\d{1,2})?)\s*(?:kg|quilos|kilos)/i) || 
                       lower.match(/peso\s*(?:de|atual|:)?\s*(\d{2,3}(?:[.,]\d{1,2})?)/i) ||
                       lower.match(/pesando\s*(\d{2,3}(?:[.,]\d{1,2})?)/i);
@@ -272,18 +280,15 @@ export function extractPatientFromVoiceOrText(input: string): ExtractedPatientRe
   }
 
   // 5. Height extraction (cm)
-  let heightCm = gender === 'feminino' ? 165 : 175;
+  let heightCm = 0;
   const heightMatch = lower.match(/(1[.,]\d{2})\s*(?:m|metros|metro)?/i) ||
                       lower.match(/(1\s*metro\s*e\s*\d{2})/i) ||
                       lower.match(/(\d{3})\s*(?:cm|centimetros|centímetros)/i) ||
                       lower.match(/altura\s*(?:de|:)?\s*(1[.,]\d{2}|\d{3})/i);
   if (heightMatch && heightMatch[1]) {
     let rawH = heightMatch[1].replace(',', '.').replace(/\s*metro\s*e\s*/, '.');
-    if (parseFloat(rawH) < 3) {
-      heightCm = Math.round(parseFloat(rawH) * 100);
-    } else {
-      heightCm = Math.round(parseFloat(rawH));
-    }
+    const parsedH = parseFloat(rawH);
+    heightCm = normalizeHeightToCm(parsedH);
     extractedFields.push(`Altura (${heightCm} cm)`);
   } else {
     missingFields.push('Altura');
@@ -328,31 +333,22 @@ export function extractPatientFromVoiceOrText(input: string): ExtractedPatientRe
     extractedFields.push(`Comorbidades: ${pathologies.join(', ')}`);
   }
 
-  // Calculate Clinical Metrics
-  const heightM = heightCm / 100;
-  const bmi = parseFloat((weightKg / (heightM * heightM)).toFixed(1));
-
-  // Mifflin-St Jeor Formula for BMR (TMB)
-  let tmb = 0;
-  if (gender === 'masculino') {
-    tmb = Math.round((10 * weightKg) + (6.25 * heightCm) - (5 * age) + 5);
-  } else {
-    tmb = Math.round((10 * weightKg) + (6.25 * heightCm) - (5 * age) - 161);
-  }
-
+  // Calculate Clinical Metrics Dinamicamente via Funções Globais NutrinK
+  const bmiData = calculateBMI(weightKg, heightCm);
+  const bmi = bmiData.bmi;
+  const tmb = calculateMifflinTMB(weightKg, heightCm, age, gender);
   const activityFactor = 1.375;
-  const getVal = Math.round(tmb * activityFactor);
-
-  // Deurenberg Body Fat estimate (%)
-  let bf = Math.round((1.20 * bmi) + (0.23 * age) - (10.8 * (gender === 'masculino' ? 1 : 0)) - 5.4);
-  if (bf < 8) bf = 10;
-  if (bf > 50) bf = 45;
+  const getVal = calculateGET(tmb, activityFactor);
+  const waterRecommendation = calculateWaterRecommendation(weightKg);
+  const bf = 0; // Inicia em 0 até aferição formal ou bioimpedância
 
   let targetWeightKg = weightKg;
-  if (objective === 'emagrecimento') {
-    targetWeightKg = parseFloat((weightKg * 0.90).toFixed(1)); // ~10% loss goal
-  } else if (objective === 'hipertrofia') {
-    targetWeightKg = parseFloat((weightKg * 1.05).toFixed(1)); // ~5% lean gain
+  if (weightKg > 0) {
+    if (objective === 'emagrecimento') {
+      targetWeightKg = parseFloat((weightKg * 0.90).toFixed(1)); // ~10% loss goal
+    } else if (objective === 'hipertrofia') {
+      targetWeightKg = parseFloat((weightKg * 1.05).toFixed(1)); // ~5% lean gain
+    }
   }
 
   const notes = [
@@ -381,7 +377,7 @@ export function extractPatientFromVoiceOrText(input: string): ExtractedPatientRe
     createdAt: new Date().toISOString().split('T')[0],
     tags: [objective.replace('_', ' '), ...pathologies],
     notes,
-    evolutionHistory: [
+    evolutionHistory: weightKg > 0 ? [
       {
         id: `evo-${Date.now()}`,
         date: new Date().toISOString().split('T')[0],
@@ -391,29 +387,32 @@ export function extractPatientFromVoiceOrText(input: string): ExtractedPatientRe
         bodyFatPercentage: bf,
         notes: 'Avaliação inicial cadastrada via Copiloto NUTRIA.'
       }
-    ],
+    ] : [],
     labExams: [],
     anamnese: {
       clinicalHistory: pathologies.join(', ') || 'Sem comorbidades prévias relatadas.',
       physicalActivity: 'Nível moderado (NAF 1.375)',
-      waterIntakeLiters: parseFloat(((weightKg * 35) / 1000).toFixed(1))
+      waterIntakeLiters: waterRecommendation.liters
     }
   };
 
   // Build spoken confirmation
   let speechConfirmation = `Paciente ${name} cadastrado com sucesso no prontuário eletrônico. `;
   if (extractedFields.length > 0) {
-    speechConfirmation += `Registrei idade de ${age} anos, peso de ${weightKg} quilos e objetivo para ${objective.replace('_', ' ')}. `;
+    speechConfirmation += `Registrei ${extractedFields.join(', ')}. `;
+  }
+  if (tmb > 0) {
+    speechConfirmation += `A Taxa Metabólica Basal foi calculada em ${tmb} calorias. `;
   }
   if (missingFields.length > 0) {
     speechConfirmation += `Deseja que eu registre os dados de ${missingFields.join(' e ')} agora?`;
   } else {
-    speechConfirmation += `A Taxa Metabólica Basal foi calculada em ${tmb} calorias. Deseja que eu estruture o plano alimentar?`;
+    speechConfirmation += `Deseja que eu estruture o plano alimentar?`;
   }
 
   // Build markdown text confirmation
   const textConfirmation = `# ✅ PACIENTE CADASTRADO COM SUCESSO!
-**Prontuário Eletrônico:** ${name} | **Idade:** ${age} anos | **Gênero:** ${gender === 'feminino' ? 'Feminino' : 'Masculino'}  
+**Prontuário Eletrônico:** ${name} | **Idade:** ${age > 0 ? `${age} anos` : 'A definir'} | **Gênero:** ${gender === 'feminino' ? 'Feminino' : 'Masculino'}  
 **Data do Cadastro:** ${new Date().toLocaleDateString('pt-BR')} | **Copiloto Clínico:** NUTRIA AI  
 
 ---
@@ -423,12 +422,14 @@ export function extractPatientFromVoiceOrText(input: string): ExtractedPatientRe
 | Indicador Clínico | Valor Calculado | Classificação / Protocolo |
 | :--- | :--- | :--- |
 | **Nome Completo** | **${name}** | Identificação no Prontuário |
-| **Peso Atual** | **${weightKg} kg** | ${missingFields.includes('Peso corporal') ? '⚠️ Padrão estimado (pendente)' : 'Informado'} |
-| **Altura** | **${heightCm} cm** | ${missingFields.includes('Altura') ? '⚠️ Padrão estimado (pendente)' : 'Informado'} |
-| **IMC** | **${bmi} kg/m²** | ${bmi < 25 ? 'Eutrofia / Normal' : bmi < 30 ? 'Sobrepeso' : 'Obesidade'} |
-| **% Gordura Estimado** | **${bf}%** | Protocolo Deurenberg |
-| **Taxa Metabólica Basal (TMB)** | **${tmb} kcal/dia** | Equação Mifflin-St Jeor |
-| **Gasto Energético Total (GET)** | **${getVal} kcal/dia** | NAF 1.375 (Atividade Moderada) |
+| **Idade** | **${age > 0 ? `${age} anos` : 'Aguardando preenchimento'}** | ${age > 0 ? 'Informado' : '⚠️ Pendente'} |
+| **Peso Atual** | **${weightKg > 0 ? `${weightKg} kg` : 'Aguardando preenchimento'}** | ${weightKg > 0 ? 'Informado' : '⚠️ Pendente'} |
+| **Altura** | **${heightCm > 0 ? `${heightCm} cm (${normalizeHeightToMeters(heightCm).toFixed(2)} m)` : 'Aguardando preenchimento'}** | ${heightCm > 0 ? 'Informado' : '⚠️ Pendente'} |
+| **IMC** | **${bmi > 0 ? `${bmi} kg/m²` : '-'}** | ${bmi > 0 ? bmiData.classification : 'Aguardando peso e altura'} |
+| **% Gordura** | **${bf > 0 ? `${bf}%` : '-'}** | ${bf > 0 ? 'Estimado' : 'Aguardando bioimpedância'} |
+| **Taxa Metabólica Basal (TMB)** | **${tmb > 0 ? `${tmb} kcal/dia` : '-'}** | ${tmb > 0 ? 'Equação Mifflin-St Jeor' : 'Aguardando peso, altura e idade'} |
+| **Gasto Energético Total (GET)** | **${getVal > 0 ? `${getVal} kcal/dia` : '-'}** | ${getVal > 0 ? 'NAF 1.375 (Atividade Moderada)' : 'Aguardando TMB'} |
+| **Meta Hídrica Diária** | **${waterRecommendation.liters > 0 ? `${waterRecommendation.liters} L/dia (${waterRecommendation.totalMl} ml)` : '-'}** | 35 ml/kg/dia |
 | **Objetivo Clínico** | **${objective.replace('_', ' ').toUpperCase()}** | Conduta Personalizada |
 ${pathologies.length > 0 ? `| **Comorbidades / Alertas** | **${pathologies.join(', ')}** | Protocolo Clínico Específico |` : ''}
 
@@ -438,7 +439,7 @@ ${missingFields.length > 0 ? `
 > ⚠️ **Dados Pendentes Sugeridos:** ${missingFields.join(', ')}.  
 > *Deseja ditar ou complementar esses dados agora para refinarmos o plano alimentar?*
 ` : `
-> 💡 **Próximo Passo:** O prontuário está 100% ativo na aba **"Pacientes & Prontuários"**. Deseja que a NUTRIA elabore o plano alimentar de **${getVal} kcal** ou agende a primeira consulta?
+> 💡 **Próximo Passo:** O prontuário está 100% ativo na aba **"Pacientes & Prontuários"**. Deseja que a NUTRIA elabore o plano alimentar ou agende a primeira consulta?
 `}`;
 
   return {

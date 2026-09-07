@@ -20,11 +20,23 @@ import {
   Award,
   Download,
   Printer,
-  ShoppingBag
+  ShoppingBag,
+  Edit3,
+  Check,
+  X,
+  Droplets
 } from 'lucide-react';
-import { Patient, AnthropometricRecord, FoodItem, UserAccount } from '../types';
+import { Patient, AnthropometricRecord, FoodItem, UserAccount, Gender } from '../types';
 import { MealPlanEditor } from './MealPlanEditor';
 import { printMealPlanPdf, sendMealPlanViaWhatsApp } from '../utils/pdfExportUtils';
+import { 
+  normalizeHeightToCm, 
+  normalizeHeightToMeters, 
+  calculateBMI, 
+  calculateMifflinTMB, 
+  calculateGET, 
+  calculateWaterRecommendation 
+} from '../utils/nutritionCalculations';
 
 interface PatientsViewProps {
   patients: Patient[];
@@ -62,6 +74,16 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
   const [newAntroWaist, setNewAntroWaist] = useState('');
   const [newAntroNotes, setNewAntroNotes] = useState('');
 
+  // Edit Patient Clinical Parameters Modal State
+  const [isEditingClinical, setIsEditingClinical] = useState(false);
+  const [editWeight, setEditWeight] = useState('');
+  const [editHeight, setEditHeight] = useState('');
+  const [editAge, setEditAge] = useState('');
+  const [editGender, setEditGender] = useState<Gender>('feminino');
+  const [editNaf, setEditNaf] = useState<number>(1.2);
+  const [editBf, setEditBf] = useState('');
+  const [editTargetWeight, setEditTargetWeight] = useState('');
+
   // Filtered Patients
   const filteredPatients = patients.filter(p => {
     const matchesSearch = 
@@ -75,20 +97,72 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
 
   const selectedPatient = patients.find(p => p.id === selectedPatientId);
 
-  // Handler for adding new anthropometry record
+  const handleOpenEditClinical = () => {
+    if (!selectedPatient) return;
+    setEditWeight(selectedPatient.currentWeightKg > 0 ? String(selectedPatient.currentWeightKg) : '');
+    setEditHeight(selectedPatient.heightCm > 0 ? String(selectedPatient.heightCm) : '');
+    setEditAge(selectedPatient.age > 0 ? String(selectedPatient.age) : '');
+    setEditGender(selectedPatient.gender || 'feminino');
+    setEditNaf(selectedPatient.activityFactor || 1.2);
+    setEditBf(selectedPatient.bodyFatPercentage > 0 ? String(selectedPatient.bodyFatPercentage) : '');
+    setEditTargetWeight(selectedPatient.targetWeightKg > 0 ? String(selectedPatient.targetWeightKg) : '');
+    setIsEditingClinical(true);
+  };
+
+  // Cálculos dinâmicos em tempo real durante a edição
+  const editWeightNum = parseFloat(editWeight) || 0;
+  const editRawHeightNum = parseFloat(editHeight) || 0;
+  const editHeightCm = normalizeHeightToCm(editRawHeightNum);
+  const editHeightM = normalizeHeightToMeters(editRawHeightNum);
+  const editAgeNum = parseInt(editAge, 10) || 0;
+  const editBfNum = parseFloat(editBf) || 0;
+  const editTargetWeightNum = parseFloat(editTargetWeight) || 0;
+
+  const editBmiData = calculateBMI(editWeightNum, editRawHeightNum);
+  const editTmb = calculateMifflinTMB(editGender, editWeightNum, editRawHeightNum, editAgeNum);
+  const editGet = calculateGET(editTmb, editNaf);
+  const editWater = calculateWaterRecommendation(editWeightNum);
+
+  const handleSaveClinicalParams = () => {
+    if (!selectedPatient) return;
+    const updated: Patient = {
+      ...selectedPatient,
+      age: editAgeNum,
+      gender: editGender,
+      currentWeightKg: editWeightNum,
+      targetWeightKg: editTargetWeightNum,
+      heightCm: editHeightCm,
+      bmi: editBmiData.bmi,
+      tmb: editTmb,
+      get: editGet,
+      bodyFatPercentage: editBfNum,
+      activityFactor: editNaf,
+      anamnese: {
+        ...selectedPatient.anamnese,
+        waterIntakeLiters: editWater.liters
+      }
+    };
+    onUpdatePatient(updated);
+    setIsEditingClinical(false);
+  };
+
+  // Handler for adding new anthropometry record com recálculo metabólico dinâmico
   const handleSaveAnthropometry = () => {
     if (!selectedPatient || !newAntroWeight) return;
     const weightNum = parseFloat(newAntroWeight);
-    const heightM = selectedPatient.heightCm / 100;
-    const newBmi = Number((weightNum / (heightM * heightM)).toFixed(1));
+    const heightCm = normalizeHeightToCm(selectedPatient.heightCm);
+    const bmiData = calculateBMI(weightNum, heightCm);
     const bfNum = newAntroBf ? parseFloat(newAntroBf) : selectedPatient.bodyFatPercentage;
+    const newTmb = calculateMifflinTMB(selectedPatient.gender, weightNum, heightCm, selectedPatient.age);
+    const newGet = calculateGET(newTmb, selectedPatient.activityFactor || 1.2);
+    const water = calculateWaterRecommendation(weightNum);
 
     const newRecord: AnthropometricRecord = {
       id: `ev-${Date.now()}`,
       date: new Date().toISOString().split('T')[0],
       weightKg: weightNum,
-      heightCm: selectedPatient.heightCm,
-      bmi: newBmi,
+      heightCm: heightCm,
+      bmi: bmiData.bmi,
       bodyFatPercentage: bfNum,
       waistCircumferenceCm: newAntroWaist ? parseFloat(newAntroWaist) : undefined,
       notes: newAntroNotes || 'Registro de acompanhamento de rotina.'
@@ -97,9 +171,15 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
     const updated: Patient = {
       ...selectedPatient,
       currentWeightKg: weightNum,
-      bmi: newBmi,
+      bmi: bmiData.bmi,
+      tmb: newTmb,
+      get: newGet,
       bodyFatPercentage: bfNum,
-      evolutionHistory: [newRecord, ...(selectedPatient.evolutionHistory || [])]
+      evolutionHistory: [newRecord, ...(selectedPatient.evolutionHistory || [])],
+      anamnese: {
+        ...selectedPatient.anamnese,
+        waterIntakeLiters: water.liters
+      }
     };
 
     onUpdatePatient(updated);
@@ -155,6 +235,15 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
 
             {/* Top Dossier Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleOpenEditClinical}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#220743] hover:bg-[#2f0b5a] text-purple-100 border border-purple-700/60 rounded-xl text-xs font-bold transition-all shadow-sm"
+                title="Editar parâmetros antropométricos e metabólicos do paciente"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-fuchsia-300" />
+                <span>Editar Dados Clínicos</span>
+              </button>
+
               {onStartTelemedicine && (
                 <button
                   onClick={() => onStartTelemedicine(selectedPatient.id)}
@@ -162,7 +251,7 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
                   id="btn-patient-start-telemedicine"
                 >
                   <Video className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-                  <span>Telemedicina com Paciente</span>
+                  <span>Telemedicina</span>
                 </button>
               )}
 
@@ -175,7 +264,7 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
               </button>
 
               <button
-                onClick={() => onOpenNutriaWithPrompt(`Nutria, analise o prontuário de ${selectedPatient.name} (Objetivo: ${selectedPatient.objective}, Peso: ${selectedPatient.currentWeightKg}kg, BF: ${selectedPatient.bodyFatPercentage}%) e sugira os melhores ajustes nutricionais.`)}
+                onClick={() => onOpenNutriaWithPrompt(`Nutria, analise o prontuário de ${selectedPatient.name} (Objetivo: ${selectedPatient.objective}, Peso: ${selectedPatient.currentWeightKg > 0 ? `${selectedPatient.currentWeightKg}kg` : 'a definir'}, BF: ${selectedPatient.bodyFatPercentage > 0 ? `${selectedPatient.bodyFatPercentage}%` : 'a definir'}) e sugira os melhores ajustes nutricionais.`)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 hover:from-fuchsia-500 hover:to-purple-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-fuchsia-950/60 border border-fuchsia-400/40 transition-all hover:scale-105"
               >
                 <Bot className="w-3.5 h-3.5 text-fuchsia-200" />
@@ -184,44 +273,62 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
             </div>
           </div>
 
-          {/* Quick Metrics Strip */}
+          {/* Quick Metrics Strip Dinâmico e Seguro Contra Zeros */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mt-6 pt-6 border-t border-purple-900/40">
             <div className="bg-[#1d0637] p-3.5 rounded-2xl border border-purple-800/40">
               <span className="text-[11px] text-purple-200 uppercase font-bold">Peso Atual</span>
-              <p className="text-lg font-black text-white mt-0.5">{selectedPatient.currentWeightKg} kg</p>
-              <span className="text-[10px] text-purple-200">Meta: {selectedPatient.targetWeightKg} kg</span>
+              <p className="text-lg font-black text-white mt-0.5">
+                {selectedPatient.currentWeightKg > 0 ? `${selectedPatient.currentWeightKg} kg` : '-'}
+              </p>
+              <span className="text-[10px] text-purple-200">
+                Meta: {selectedPatient.targetWeightKg > 0 ? `${selectedPatient.targetWeightKg} kg` : '-'}
+              </span>
             </div>
 
             <div className="bg-[#1d0637] p-3.5 rounded-2xl border border-purple-800/40">
               <span className="text-[11px] text-purple-200 uppercase font-bold">Altura</span>
-              <p className="text-lg font-black text-white mt-0.5">{selectedPatient.heightCm} cm</p>
-              <span className="text-[10px] text-purple-200">({(selectedPatient.heightCm / 100).toFixed(2)} m)</span>
+              <p className="text-lg font-black text-white mt-0.5">
+                {selectedPatient.heightCm > 0 ? `${normalizeHeightToCm(selectedPatient.heightCm)} cm` : '-'}
+              </p>
+              <span className="text-[10px] text-purple-200">
+                {selectedPatient.heightCm > 0 ? `(${normalizeHeightToMeters(selectedPatient.heightCm).toFixed(2)} m)` : 'cm ou metros'}
+              </span>
             </div>
 
             <div className="bg-[#1d0637] p-3.5 rounded-2xl border border-purple-800/40">
               <span className="text-[11px] text-purple-200 uppercase font-bold">IMC Atual</span>
-              <p className="text-lg font-black text-white mt-0.5">{selectedPatient.bmi}</p>
+              <p className="text-lg font-black text-white mt-0.5">
+                {selectedPatient.bmi > 0 ? selectedPatient.bmi : '-'}
+              </p>
               <span className="text-[10px] text-fuchsia-300 font-bold">
-                {selectedPatient.bmi < 25 ? 'Eutrofia' : 'Sobrepeso'}
+                {selectedPatient.bmi > 0 
+                  ? calculateBMI(selectedPatient.currentWeightKg, selectedPatient.heightCm).classification.split(' ')[0] 
+                  : 'Aguardando'}
               </span>
             </div>
 
             <div className="bg-[#1d0637] p-3.5 rounded-2xl border border-purple-800/40">
               <span className="text-[11px] text-purple-200 uppercase font-bold">% Gordura</span>
-              <p className="text-lg font-black text-white mt-0.5">{selectedPatient.bodyFatPercentage}%</p>
+              <p className="text-lg font-black text-white mt-0.5">
+                {selectedPatient.bodyFatPercentage > 0 ? `${selectedPatient.bodyFatPercentage}%` : '-'}
+              </p>
               <span className="text-[10px] text-purple-200">Bioimpedância</span>
             </div>
 
             <div className="bg-[#1d0637] p-3.5 rounded-2xl border border-purple-800/40">
               <span className="text-[11px] text-purple-200 uppercase font-bold">TMB (Basal)</span>
-              <p className="text-lg font-black text-white mt-0.5">{selectedPatient.tmb} kcal</p>
+              <p className="text-lg font-black text-white mt-0.5">
+                {selectedPatient.tmb > 0 ? `${selectedPatient.tmb} kcal` : '-'}
+              </p>
               <span className="text-[10px] text-purple-200">Mifflin-St Jeor</span>
             </div>
 
             <div className="bg-[#1d0637] p-3.5 rounded-2xl border border-purple-800/40">
               <span className="text-[11px] text-purple-200 uppercase font-bold">GET Total</span>
-              <p className="text-lg font-black text-fuchsia-300 mt-0.5">{selectedPatient.get} kcal</p>
-              <span className="text-[10px] text-purple-200">NAF: {selectedPatient.activityFactor || 1.55}</span>
+              <p className="text-lg font-black text-fuchsia-300 mt-0.5">
+                {selectedPatient.get > 0 ? `${selectedPatient.get} kcal` : '-'}
+              </p>
+              <span className="text-[10px] text-purple-200">NAF: {selectedPatient.activityFactor || 1.2}</span>
             </div>
           </div>
 
@@ -557,17 +664,195 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
             <div className="p-4 bg-[#1d0637] rounded-2xl border border-purple-800/40 space-y-3 text-xs text-purple-100 leading-relaxed font-mono">
               <h4 className="font-bold text-sm text-fuchsia-300 font-sans">Visualização do Dossiê do Paciente:</h4>
               <p>
-                <strong className="text-white">PACIENTE:</strong> {selectedPatient.name} ({selectedPatient.age} anos) • <strong className="text-white">OBJETIVO:</strong> {selectedPatient.objective.toUpperCase()}
+                <strong className="text-white">PACIENTE:</strong> {selectedPatient.name} ({selectedPatient.age > 0 ? `${selectedPatient.age} anos` : 'Idade a definir'}) • <strong className="text-white">OBJETIVO:</strong> {selectedPatient.objective.toUpperCase()}
               </p>
               <p>
-                <strong className="text-white">ANTROPOMETRIA:</strong> Peso inicial {selectedPatient.initialWeightKg} kg ➔ Peso Atual {selectedPatient.currentWeightKg} kg ({selectedPatient.currentWeightKg - selectedPatient.initialWeightKg > 0 ? '+' : ''}{(selectedPatient.currentWeightKg - selectedPatient.initialWeightKg).toFixed(1)} kg) • IMC {selectedPatient.bmi} • BF {selectedPatient.bodyFatPercentage}%
+                <strong className="text-white">ANTROPOMETRIA:</strong> Peso inicial {selectedPatient.initialWeightKg > 0 ? `${selectedPatient.initialWeightKg} kg` : '-'} ➔ Peso Atual {selectedPatient.currentWeightKg > 0 ? `${selectedPatient.currentWeightKg} kg` : '-'} {selectedPatient.initialWeightKg > 0 && selectedPatient.currentWeightKg > 0 ? `(${selectedPatient.currentWeightKg - selectedPatient.initialWeightKg > 0 ? '+' : ''}${(selectedPatient.currentWeightKg - selectedPatient.initialWeightKg).toFixed(1)} kg)` : ''} • IMC {selectedPatient.bmi > 0 ? selectedPatient.bmi : '-'} • BF {selectedPatient.bodyFatPercentage > 0 ? `${selectedPatient.bodyFatPercentage}%` : '-'}
               </p>
               <p>
-                <strong className="text-white">GASTO ENERGÉTICO:</strong> TMB {selectedPatient.tmb} kcal | GET {selectedPatient.get} kcal | Meta Hídrica {((selectedPatient.currentWeightKg * 35) / 1000).toFixed(1)} L/dia
+                <strong className="text-white">GASTO ENERGÉTICO:</strong> TMB {selectedPatient.tmb > 0 ? `${selectedPatient.tmb} kcal` : '-'} | GET {selectedPatient.get > 0 ? `${selectedPatient.get} kcal` : '-'} | Meta Hídrica {selectedPatient.currentWeightKg > 0 ? `${((selectedPatient.currentWeightKg * 35) / 1000).toFixed(1)} L/dia` : '-'}
               </p>
               <p className="font-sans text-purple-200 pt-2 border-t border-purple-800/40">
                 <strong className="text-white">Conduta Clínica:</strong> {selectedPatient.notes || 'Acompanhamento nutricional focado em otimização de composição corporal e estilo de vida.'}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Editar Dados Clínicos & Antropometria do Paciente */}
+        {isEditingClinical && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-[#17042b] border border-purple-700/80 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-purple-800/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-purple-950/80 text-fuchsia-400 border border-purple-700/60">
+                    <Scale className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Editar Dados Clínicos & Antropométricos</h3>
+                    <p className="text-xs text-purple-300">Atualização em tempo real das equações metabólicas de {selectedPatient.name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditingClinical(false)}
+                  className="p-1.5 rounded-xl hover:bg-purple-900/40 text-purple-300 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Form Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-purple-200 font-bold block mb-1">Gênero Biológico:</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditGender('masculino')}
+                      className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                        editGender === 'masculino'
+                          ? 'bg-fuchsia-950 text-fuchsia-200 border-fuchsia-500 shadow-sm'
+                          : 'bg-[#1e073c] text-purple-200 border-purple-800'
+                      }`}
+                    >
+                      Masculino
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditGender('feminino')}
+                      className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                        editGender === 'feminino'
+                          ? 'bg-fuchsia-950 text-fuchsia-200 border-fuchsia-500 shadow-sm'
+                          : 'bg-[#1e073c] text-purple-200 border-purple-800'
+                      }`}
+                    >
+                      Feminino
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-purple-200 font-bold block mb-1">Idade (anos):</label>
+                  <input
+                    type="number"
+                    value={editAge}
+                    onChange={(e) => setEditAge(e.target.value)}
+                    placeholder="ex: 28"
+                    className="w-full bg-[#120326] border border-purple-700/80 rounded-xl p-2.5 text-xs text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-purple-200 font-bold block mb-1">Peso Atual (kg):</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editWeight}
+                    onChange={(e) => setEditWeight(e.target.value)}
+                    placeholder="ex: 75.0"
+                    className="w-full bg-[#120326] border border-purple-700/80 rounded-xl p-2.5 text-xs text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs text-purple-200 font-bold">Altura:</label>
+                    <span className="text-[10px] text-fuchsia-300 font-semibold">
+                      {editHeightCm > 0 ? `${editHeightCm} cm (${editHeightM.toFixed(2)} m)` : 'cm ou metros'}
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editHeight}
+                    onChange={(e) => setEditHeight(e.target.value)}
+                    placeholder="ex: 175 ou 1.75"
+                    className="w-full bg-[#120326] border border-purple-700/80 rounded-xl p-2.5 text-xs text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-purple-200 font-bold block mb-1">Meta de Peso (kg):</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editTargetWeight}
+                    onChange={(e) => setEditTargetWeight(e.target.value)}
+                    placeholder="ex: 70.0"
+                    className="w-full bg-[#120326] border border-purple-700/80 rounded-xl p-2.5 text-xs text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-purple-200 font-bold block mb-1">% Gordura Corporal Estimado:</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editBf}
+                    onChange={(e) => setEditBf(e.target.value)}
+                    placeholder="ex: 15.0"
+                    className="w-full bg-[#120326] border border-purple-700/80 rounded-xl p-2.5 text-xs text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="text-xs text-purple-200 font-bold block mb-1">Nível de Atividade Física (NAF):</label>
+                  <select
+                    value={editNaf}
+                    onChange={(e) => setEditNaf(Number(e.target.value))}
+                    className="w-full bg-[#120326] border border-purple-700/80 rounded-xl p-2.5 text-xs text-white font-medium focus:outline-none focus:border-fuchsia-400"
+                  >
+                    <option value={1.2}>Sedentário (Pouco ou nenhum exercício) • 1.20</option>
+                    <option value={1.375}>Levemente Ativo (Treino 1-3 dias/semana) • 1.375</option>
+                    <option value={1.55}>Moderadamente Ativo (Treino 3-5 dias/semana) • 1.55</option>
+                    <option value={1.725}>Muito Ativo (Treino intenso 6-7 dias/semana) • 1.725</option>
+                    <option value={1.9}>Extremamente Ativo (Atleta de alto rendimento) • 1.90</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Dynamic Calculations Preview */}
+              <div className="p-4 bg-[#120326] rounded-2xl border border-fuchsia-500/30 space-y-2">
+                <span className="text-[10px] text-fuchsia-300 uppercase font-black tracking-wider block">
+                  Prévia dos Cálculos Dinâmicos (Mifflin-St Jeor)
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="bg-[#1d0637] p-2 rounded-xl">
+                    <span className="text-[10px] text-purple-200 font-bold block">IMC</span>
+                    <span className="text-xs font-black text-white">{editBmiData.bmi > 0 ? editBmiData.bmi : '-'}</span>
+                  </div>
+                  <div className="bg-[#1d0637] p-2 rounded-xl">
+                    <span className="text-[10px] text-purple-200 font-bold block">TMB</span>
+                    <span className="text-xs font-black text-white">{editTmb > 0 ? `${editTmb} kcal` : '-'}</span>
+                  </div>
+                  <div className="bg-[#1d0637] p-2 rounded-xl">
+                    <span className="text-[10px] text-fuchsia-300 font-bold block">GET Total</span>
+                    <span className="text-xs font-black text-fuchsia-300">{editGet > 0 ? `${editGet} kcal` : '-'}</span>
+                  </div>
+                  <div className="bg-[#1d0637] p-2 rounded-xl">
+                    <span className="text-[10px] text-purple-200 font-bold block">Meta Hídrica</span>
+                    <span className="text-xs font-black text-purple-200">{editWater.liters > 0 ? `${editWater.liters} L` : '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingClinical(false)}
+                  className="px-4 py-2 bg-[#220743] hover:bg-[#2d0959] text-purple-200 rounded-xl text-xs font-bold transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveClinicalParams}
+                  className="px-5 py-2.5 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-fuchsia-950/60 transition-all border border-fuchsia-400/40"
+                >
+                  Salvar Alterações
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -678,7 +963,7 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
                       {patient.name}
                     </h3>
                     <p className="text-xs text-purple-200 mt-0.5 font-medium">
-                      {patient.age} anos • {patient.gender === 'masculino' ? 'Masc' : 'Fem'}
+                      {patient.age > 0 ? `${patient.age} anos` : 'Idade não informada'} • {patient.gender === 'masculino' ? 'Masc' : 'Fem'}
                     </p>
                   </div>
                 </div>
@@ -691,15 +976,21 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
               <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-purple-900/40 text-center">
                 <div className="bg-[#1d0637] p-2 rounded-xl">
                   <span className="text-[10px] text-purple-200 font-semibold block">Peso</span>
-                  <span className="text-xs font-black text-white">{patient.currentWeightKg} kg</span>
+                  <span className="text-xs font-black text-white">
+                    {patient.currentWeightKg > 0 ? `${patient.currentWeightKg} kg` : '-'}
+                  </span>
                 </div>
                 <div className="bg-[#1d0637] p-2 rounded-xl">
                   <span className="text-[10px] text-purple-200 font-semibold block">IMC</span>
-                  <span className="text-xs font-black text-fuchsia-300">{patient.bmi}</span>
+                  <span className="text-xs font-black text-fuchsia-300">
+                    {patient.bmi > 0 ? patient.bmi : '-'}
+                  </span>
                 </div>
                 <div className="bg-[#1d0637] p-2 rounded-xl">
                   <span className="text-[10px] text-purple-200 font-semibold block">% Gordura</span>
-                  <span className="text-xs font-black text-white">{patient.bodyFatPercentage}%</span>
+                  <span className="text-xs font-black text-white">
+                    {patient.bodyFatPercentage > 0 ? `${patient.bodyFatPercentage}%` : '-'}
+                  </span>
                 </div>
               </div>
 

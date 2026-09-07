@@ -17,6 +17,7 @@ export interface TMBResult {
   bmiClassification: string;
   idealWeightRange: { min: number; max: number };
   waterRecommendationLiters: number;
+  waterRecommendationMl: number;
   macronutrientSuggestion: {
     protein: { grams: number; gramsPerKg: number; calories: number; percentage: number };
     carbs: { grams: number; gramsPerKg: number; calories: number; percentage: number };
@@ -24,10 +25,42 @@ export interface TMBResult {
   };
 }
 
-export function calculateBMI(weightKg: number, heightCm: number): { bmi: number; classification: string; idealRange: { min: number; max: number } } {
-  const heightM = heightCm / 100;
-  if (heightM <= 0) return { bmi: 0, classification: 'N/A', idealRange: { min: 0, max: 0 } };
-  
+/**
+ * Normaliza qualquer valor de altura inserido (cm ou m) para metros:
+ * - Se > 3.0 (ex: 175, 180), considera centímetros e divide por 100 -> 1.75 m
+ * - Se <= 3.0 e > 0 (ex: 1.75, 1.80), já está em metros -> 1.75 m
+ * - Se <= 0 ou inválido -> 0
+ */
+export function normalizeHeightToMeters(height: number): number {
+  if (!height || isNaN(height) || height <= 0) return 0;
+  return height > 3.0 ? Number((height / 100).toFixed(2)) : Number(height.toFixed(2));
+}
+
+/**
+ * Normaliza qualquer valor de altura inserido (cm ou m) para centímetros:
+ * - Se <= 3.0 e > 0 (ex: 1.75, 1.80), considera metros e multiplica por 100 -> 175 cm
+ * - Se > 3.0 (ex: 175, 180), já está em centímetros -> 175 cm
+ * - Se <= 0 ou inválido -> 0
+ */
+export function normalizeHeightToCm(height: number): number {
+  if (!height || isNaN(height) || height <= 0) return 0;
+  return height <= 3.0 ? Math.round(height * 100) : Math.round(height);
+}
+
+/**
+ * Cálculo Dinâmico de IMC:
+ * Padroniza a altura em metros antes de calcular: peso / (alturaEmMetros * alturaEmMetros)
+ */
+export function calculateBMI(weightKg: number, rawHeight: number): {
+  bmi: number;
+  classification: string;
+  idealRange: { min: number; max: number };
+} {
+  const heightM = normalizeHeightToMeters(rawHeight);
+  if (!weightKg || weightKg <= 0 || heightM <= 0) {
+    return { bmi: 0, classification: '-', idealRange: { min: 0, max: 0 } };
+  }
+
   const bmi = Number((weightKg / (heightM * heightM)).toFixed(1));
   let classification = 'Eutrofia (Peso Normal)';
 
@@ -48,48 +81,100 @@ export function calculateBMI(weightKg: number, heightCm: number): { bmi: number;
   };
 }
 
+/**
+ * Cálculo Dinâmico de TMB (Mifflin-St Jeor):
+ * - Homens: (10 * peso_kg) + (6.25 * altura_cm) - (5 * idade) + 5
+ * - Mulheres: (10 * peso_kg) + (6.25 * altura_cm) - (5 * idade) - 161
+ */
+export function calculateMifflinTMB(
+  gender: Gender,
+  weightKg: number,
+  rawHeight: number,
+  ageYears: number
+): number {
+  if (!weightKg || weightKg <= 0 || !rawHeight || rawHeight <= 0 || !ageYears || ageYears <= 0) {
+    return 0;
+  }
+  const heightCm = normalizeHeightToCm(rawHeight);
+  const base = (10 * weightKg) + (6.25 * heightCm) - (5 * ageYears);
+  const tmb = gender === 'masculino' ? base + 5 : base - 161;
+  return Math.max(0, Math.round(tmb));
+}
+
+/**
+ * Cálculo Dinâmico de GET (Gasto Energético Total):
+ * GET = TMB * fator_NAF_selecionado
+ */
+export function calculateGET(tmb: number, activityFactor: number): number {
+  if (!tmb || tmb <= 0) return 0;
+  const naf = activityFactor > 0 ? activityFactor : 1.2;
+  return Math.round(tmb * naf);
+}
+
+/**
+ * Cálculo Dinâmico de Meta Hídrica:
+ * Meta Hídrica = peso_kg * 35 (resultado em mL/dia e Litros/dia)
+ */
+export function calculateWaterRecommendation(weightKg: number): { ml: number; liters: number } {
+  if (!weightKg || weightKg <= 0) {
+    return { ml: 0, liters: 0 };
+  }
+  const ml = Math.round(weightKg * 35);
+  const liters = Number((ml / 1000).toFixed(1));
+  return { ml, liters };
+}
+
+/**
+ * Cálculo Completo de Taxas Metabólicas e Distribuição Nutricional
+ */
 export function calculateMetabolicRates(input: TMBInput): TMBResult {
-  const { formula, gender, weightKg, heightCm, ageYears, bodyFatPercentage, activityFactor } = input;
+  const { formula, gender, weightKg, heightCm: rawHeight, ageYears, bodyFatPercentage, activityFactor } = input;
+
+  const heightCm = normalizeHeightToCm(rawHeight);
+  const heightM = normalizeHeightToMeters(rawHeight);
+  const isInputValid = weightKg > 0 && heightCm > 0 && ageYears > 0;
+
   let tmb = 0;
 
-  if (formula === 'mifflin') {
-    // Mifflin-St Jeor:
-    // Homens: 10*P + 6.25*A - 5*I + 5
-    // Mulheres: 10*P + 6.25*A - 5*I - 161
-    const base = (10 * weightKg) + (6.25 * heightCm) - (5 * ageYears);
-    tmb = gender === 'masculino' ? base + 5 : base - 161;
-  } else if (formula === 'harris_benedict') {
-    // Harris-Benedict revisada (Roza & Shizgal 1984):
-    if (gender === 'masculino') {
-      tmb = 88.362 + (13.397 * weightKg) + (4.799 * heightCm) - (5.677 * ageYears);
+  if (isInputValid) {
+    if (formula === 'mifflin') {
+      // Mifflin-St Jeor:
+      // Homens: (10 * peso_kg) + (6.25 * altura_cm) - (5 * idade) + 5
+      // Mulheres: (10 * peso_kg) + (6.25 * altura_cm) - (5 * idade) - 161
+      tmb = calculateMifflinTMB(gender, weightKg, heightCm, ageYears);
+    } else if (formula === 'harris_benedict') {
+      // Harris-Benedict revisada (Roza & Shizgal 1984):
+      if (gender === 'masculino') {
+        tmb = 88.362 + (13.397 * weightKg) + (4.799 * heightCm) - (5.677 * ageYears);
+      } else {
+        tmb = 447.593 + (9.247 * weightKg) + (3.098 * heightCm) - (4.330 * ageYears);
+      }
+    } else if (formula === 'cunningham') {
+      // Cunningham (1980): 500 + 22 * Massa Livre de Gordura (FFM)
+      const bf = bodyFatPercentage && bodyFatPercentage > 0 ? bodyFatPercentage : (gender === 'masculino' ? 15 : 23);
+      const ffm = weightKg * (1 - bf / 100);
+      tmb = 500 + (22 * ffm);
     } else {
-      tmb = 447.593 + (9.247 * weightKg) + (3.098 * heightCm) - (4.330 * ageYears);
+      // DRI / IOM
+      if (gender === 'masculino') {
+        tmb = 204 - (4.0 * ageYears) + (450.5 * heightM) + (11.69 * weightKg);
+      } else {
+        tmb = 255 - (2.35 * ageYears) + (361.5 * heightM) + (9.39 * weightKg);
+      }
     }
-  } else if (formula === 'cunningham') {
-    // Cunningham (1980): 500 + 22 * Massa Livre de Gordura (FFM)
-    const bf = bodyFatPercentage ?? (gender === 'masculino' ? 15 : 23);
-    const ffm = weightKg * (1 - bf / 100);
-    tmb = 500 + (22 * ffm);
-  } else {
-    // DRI / IOM
-    if (gender === 'masculino') {
-      tmb = 204 - (4.0 * ageYears) + (450.5 * (heightCm / 100)) + (11.69 * weightKg);
-    } else {
-      tmb = 255 - (2.35 * ageYears) + (361.5 * (heightCm / 100)) + (9.39 * weightKg);
-    }
+    tmb = Math.max(0, Math.round(tmb));
   }
 
-  tmb = Math.round(tmb);
-  const get = Math.round(tmb * (activityFactor || 1.2));
-  const bmiData = calculateBMI(weightKg, heightCm);
-  const waterRecommendationLiters = Number(((weightKg * 35) / 1000).toFixed(1));
+  const get = isInputValid && activityFactor > 0 ? Math.round(tmb * activityFactor) : 0;
+  const bmiData = calculateBMI(weightKg, rawHeight);
+  const waterData = calculateWaterRecommendation(weightKg);
 
-  // Default balanced distribution (ex: 2.0g/kg ptn, 25% fat, rest carb)
-  const ptnGrams = Math.round(weightKg * 1.8);
+  // Default balanced distribution (ex: 1.8g/kg ptn, 28% fat, rest carb)
+  const ptnGrams = isInputValid ? Math.round(weightKg * 1.8) : 0;
   const ptnCals = ptnGrams * 4;
-  const fatCals = Math.round(get * 0.28);
+  const fatCals = get > 0 ? Math.round(get * 0.28) : 0;
   const fatGrams = Math.round(fatCals / 9);
-  const carbCals = Math.max(0, get - ptnCals - fatCals);
+  const carbCals = get > 0 ? Math.max(0, get - ptnCals - fatCals) : 0;
   const carbGrams = Math.round(carbCals / 4);
 
   return {
@@ -98,25 +183,26 @@ export function calculateMetabolicRates(input: TMBInput): TMBResult {
     bmi: bmiData.bmi,
     bmiClassification: bmiData.classification,
     idealWeightRange: bmiData.idealRange,
-    waterRecommendationLiters,
+    waterRecommendationLiters: waterData.liters,
+    waterRecommendationMl: waterData.ml,
     macronutrientSuggestion: {
       protein: {
         grams: ptnGrams,
-        gramsPerKg: Number((ptnGrams / weightKg).toFixed(1)),
+        gramsPerKg: weightKg > 0 ? Number((ptnGrams / weightKg).toFixed(1)) : 0,
         calories: ptnCals,
-        percentage: Math.round((ptnCals / get) * 100)
+        percentage: get > 0 ? Math.round((ptnCals / get) * 100) : 0
       },
       carbs: {
         grams: carbGrams,
-        gramsPerKg: Number((carbGrams / weightKg).toFixed(1)),
+        gramsPerKg: weightKg > 0 ? Number((carbGrams / weightKg).toFixed(1)) : 0,
         calories: carbCals,
-        percentage: Math.round((carbCals / get) * 100)
+        percentage: get > 0 ? Math.round((carbCals / get) * 100) : 0
       },
       fat: {
         grams: fatGrams,
-        gramsPerKg: Number((fatGrams / weightKg).toFixed(1)),
+        gramsPerKg: weightKg > 0 ? Number((fatGrams / weightKg).toFixed(1)) : 0,
         calories: fatCals,
-        percentage: Math.round((fatCals / get) * 100)
+        percentage: get > 0 ? Math.round((fatCals / get) * 100) : 0
       }
     }
   };
@@ -129,6 +215,10 @@ export function calculatePollock3Folds(
   abdomenOrSuprailiacMm: number,
   thighMm: number
 ): { bodyFatPercentage: number; density: number } {
+  if (!age || age <= 0 || !chestOrTricepsMm || !abdomenOrSuprailiacMm || !thighMm) {
+    return { bodyFatPercentage: 0, density: 0 };
+  }
+
   const sumFolds = chestOrTricepsMm + abdomenOrSuprailiacMm + thighMm;
   let bodyDensity = 0;
 
@@ -141,6 +231,8 @@ export function calculatePollock3Folds(
     // DC = 1.0994921 - (0.0009929 * soma) + (0.0000023 * (soma^2)) - (0.0001392 * idade)
     bodyDensity = 1.0994921 - (0.0009929 * sumFolds) + (0.0000023 * Math.pow(sumFolds, 2)) - (0.0001392 * age);
   }
+
+  if (bodyDensity <= 0) return { bodyFatPercentage: 0, density: 0 };
 
   // Equação de Siri: %G = [(4.95 / DC) - 4.50] * 100
   const bodyFat = Number((((4.95 / bodyDensity) - 4.50) * 100).toFixed(1));

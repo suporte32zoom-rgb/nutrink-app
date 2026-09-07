@@ -1,4 +1,12 @@
 import { Patient, MealPlan, UserAccount } from '../types';
+import { 
+  normalizeHeightToCm, 
+  normalizeHeightToMeters, 
+  calculateBMI, 
+  calculateMifflinTMB, 
+  calculateGET, 
+  calculateWaterRecommendation 
+} from './nutritionCalculations';
 
 /**
  * Generates an official, beautifully styled print window with clinic letterhead (NutrinK + Professional CRN)
@@ -9,6 +17,15 @@ export function printMealPlanPdf(patient: Patient, userAccount?: UserAccount): v
     alert('Por favor, permita janelas pop-up para gerar a impressão do plano alimentar.');
     return;
   }
+
+  // Cálculos dinâmicos em tempo real para a emissão do documento
+  const heightM = normalizeHeightToMeters(patient.heightCm);
+  const heightCm = normalizeHeightToCm(patient.heightCm);
+  const weightKg = patient.currentWeightKg || 0;
+  const bmiData = calculateBMI(weightKg, patient.heightCm);
+  const tmb = calculateMifflinTMB(patient.gender, weightKg, patient.heightCm, patient.age);
+  const getVal = calculateGET(tmb, patient.activityFactor || 1.2);
+  const waterData = calculateWaterRecommendation(weightKg);
 
   const mealPlan = patient.mealPlan;
   const doctorName = userAccount?.name || 'Dr. Nutricionista';
@@ -61,7 +78,7 @@ export function printMealPlanPdf(patient: Patient, userAccount?: UserAccount): v
     <html lang="pt-BR">
       <head>
         <meta charset="utf-8" />
-        <title>Plano Alimentar - ${patient.name} | NutrinK</title>
+        <title>Dossiê & Parecer Clínico - ${patient.name} | NutrinK</title>
         <style>
           @page {
             size: A4;
@@ -125,6 +142,31 @@ export function printMealPlanPdf(patient: Patient, userAccount?: UserAccount): v
             font-size: 14px;
             color: #1e1b4b;
             font-weight: 800;
+            margin-top: 2px;
+          }
+          .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+          }
+          .metric-box {
+            background: #fdf4ff;
+            border: 1px solid #f0abfc;
+            padding: 10px 14px;
+            border-radius: 8px;
+            text-align: center;
+          }
+          .metric-val {
+            font-size: 16px;
+            font-weight: 900;
+            color: #701a75;
+          }
+          .metric-lbl {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #a21caf;
             margin-top: 2px;
           }
           .macro-bar {
@@ -253,11 +295,11 @@ export function printMealPlanPdf(patient: Patient, userAccount?: UserAccount): v
           </div>
           <div>
             <div class="patient-field">Idade / Gênero</div>
-            <div class="patient-value">${patient.age} anos (${patient.gender})</div>
+            <div class="patient-value">${patient.age > 0 ? `${patient.age} anos` : '-'} (${patient.gender})</div>
           </div>
           <div>
-            <div class="patient-field">Peso Atual / Meta</div>
-            <div class="patient-value">${patient.currentWeightKg} kg → ${patient.targetWeightKg} kg</div>
+            <div class="patient-field">Peso Atual / Altura</div>
+            <div class="patient-value">${weightKg > 0 ? `${weightKg} kg` : '-'} • ${heightCm > 0 ? `${heightCm} cm (${heightM.toFixed(2)}m)` : '-'}</div>
           </div>
           <div>
             <div class="patient-field">Objetivo Clínico</div>
@@ -265,25 +307,45 @@ export function printMealPlanPdf(patient: Patient, userAccount?: UserAccount): v
           </div>
         </div>
 
+        {/* Parecer de Cálculos Metabólicos Dinâmicos */}
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <div class="metric-val">${bmiData.bmi > 0 ? bmiData.bmi : '-'}</div>
+            <div class="metric-lbl">IMC (${bmiData.classification !== '-' ? bmiData.classification.split(' ')[0] : 'Aguardando'})</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-val">${tmb > 0 ? `${tmb} kcal` : '-'}</div>
+            <div class="metric-lbl">TMB (Mifflin-St Jeor)</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-val">${getVal > 0 ? `${getVal} kcal` : '-'}</div>
+            <div class="metric-lbl">GET (NAF ${patient.activityFactor || 1.2})</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-val">${waterData.ml > 0 ? `${waterData.ml} mL` : '-'}</div>
+            <div class="metric-lbl">Meta Hídrica (${waterData.liters > 0 ? `${waterData.liters} L/dia` : '35 mL/kg'})</div>
+          </div>
+        </div>
+
         <div class="macro-bar">
           <div class="macro-item">
-            <div class="macro-val">${mealPlan?.targetCalories || patient.get} kcal</div>
+            <div class="macro-val">${mealPlan?.targetCalories || (getVal > 0 ? getVal : '-')} kcal</div>
             <div class="macro-lbl">Meta Energética (VET)</div>
           </div>
           <div class="macro-item">
-            <div class="macro-val">${mealPlan?.targetProteinGrams || Math.round(patient.currentWeightKg * 2.0)}g</div>
-            <div class="macro-lbl">Proteínas</div>
+            <div class="macro-val">${mealPlan?.targetProteinGrams || (weightKg > 0 ? Math.round(weightKg * 2.0) : '-')}g</div>
+            <div class="macro-lbl">Proteínas (2.0g/kg)</div>
           </div>
           <div class="macro-item">
-            <div class="macro-val">${mealPlan?.targetCarbsGrams || Math.round((patient.get * 0.45) / 4)}g</div>
+            <div class="macro-val">${mealPlan?.targetCarbsGrams || (getVal > 0 ? Math.round((getVal * 0.45) / 4) : '-')}g</div>
             <div class="macro-lbl">Carboidratos</div>
           </div>
           <div class="macro-item">
-            <div class="macro-val">${mealPlan?.targetFatGrams || Math.round((patient.get * 0.25) / 9)}g</div>
+            <div class="macro-val">${mealPlan?.targetFatGrams || (getVal > 0 ? Math.round((getVal * 0.25) / 9) : '-')}g</div>
             <div class="macro-lbl">Lipídios (Gorduras)</div>
           </div>
           <div class="macro-item">
-            <div class="macro-val">${patient.anamnese?.waterIntakeLiters || ((patient.currentWeightKg * 35)/1000).toFixed(1)} L/dia</div>
+            <div class="macro-val">${waterData.liters > 0 ? `${waterData.liters} L/dia` : '-'}</div>
             <div class="macro-lbl">Meta de Hidratação</div>
           </div>
         </div>
@@ -293,7 +355,7 @@ export function printMealPlanPdf(patient: Patient, userAccount?: UserAccount): v
 
         <div class="guidelines">
           <strong>💧 Orientações Gerais & Hidratação:</strong>
-          • Beba pelo menos ${(patient.anamnese?.waterIntakeLiters || ((patient.currentWeightKg * 35)/1000).toFixed(1))} litros de água ao longo do dia, distribuídos entre as refeições.<br>
+          • Meta Hídrica calculada: ${waterData.ml > 0 ? `${waterData.ml} mL ao dia (${waterData.liters} L)` : '35 mL por kg de peso corporal ao dia'}, distribuídos ao longo do dia.<br>
           • Mastigue devagar e priorize alimentos frescos e integrais conforme a prescrição.<br>
           • Em caso de dúvidas ou necessidade de substituições, consulte seu nutricionista através do canal oficial.
         </div>

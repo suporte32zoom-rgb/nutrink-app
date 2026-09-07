@@ -9,10 +9,16 @@ import {
   Bot, 
   Check, 
   Layers, 
-  Apple
+  Apple,
+  RotateCcw
 } from 'lucide-react';
 import { Gender, ClinicalProtocol } from '../types';
-import { calculateMetabolicRates, calculatePollock3Folds } from '../utils/nutritionCalculations';
+import { 
+  calculateMetabolicRates, 
+  calculatePollock3Folds, 
+  normalizeHeightToCm, 
+  normalizeHeightToMeters 
+} from '../utils/nutritionCalculations';
 import { CLINICAL_PROTOCOLS, INITIAL_FOOD_DATABASE } from '../data/initialData';
 
 interface NutriCalcViewProps {
@@ -22,20 +28,20 @@ interface NutriCalcViewProps {
 export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPrompt }) => {
   const [calcSubTab, setCalcSubTab] = useState<'tmb_get' | 'pollock' | 'protocolos' | 'tabela_alimentos'>('tmb_get');
 
-  // TMB & GET Calculator State
+  // TMB & GET Calculator State - Iniciam Zerados / Vazios
   const [formula, setFormula] = useState<'mifflin' | 'harris_benedict' | 'cunningham' | 'dri'>('mifflin');
   const [gender, setGender] = useState<Gender>('masculino');
-  const [weightKg, setWeightKg] = useState<number>(75);
-  const [heightCm, setHeightCm] = useState<number>(178);
-  const [ageYears, setAgeYears] = useState<number>(30);
-  const [bodyFat, setBodyFat] = useState<number>(14);
-  const [activityFactor, setActivityFactor] = useState<number>(1.55);
+  const [weightInput, setWeightInput] = useState<string>('');
+  const [heightInput, setHeightInput] = useState<string>('');
+  const [ageInput, setAgeInput] = useState<string>('');
+  const [bodyFatInput, setBodyFatInput] = useState<string>('');
+  const [activityFactor, setActivityFactor] = useState<number>(1.2);
   const [customProteinGPerKg, setCustomProteinGPerKg] = useState<number>(2.0);
 
-  // Pollock 3 folds state
-  const [fold1, setFold1] = useState<number>(12); // Chest or Triceps
-  const [fold2, setFold2] = useState<number>(18); // Abdomen or Suprailiac
-  const [fold3, setFold3] = useState<number>(15); // Thigh
+  // Pollock 3 folds state - Iniciam Zerados / Vazios
+  const [fold1Input, setFold1Input] = useState<string>('');
+  const [fold2Input, setFold2Input] = useState<string>('');
+  const [fold3Input, setFold3Input] = useState<string>('');
 
   // Protocol filter
   const [selectedProtocol, setSelectedProtocol] = useState<ClinicalProtocol>(CLINICAL_PROTOCOLS[0]);
@@ -44,12 +50,24 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
   const [foodSearch, setFoodSearch] = useState('');
   const [foodCategory, setFoodCategory] = useState('Todas');
 
-  // Compute Results
+  // Conversões e normalizações dinâmicas
+  const weightKg = parseFloat(weightInput) || 0;
+  const rawHeight = parseFloat(heightInput) || 0;
+  const heightCm = normalizeHeightToCm(rawHeight);
+  const heightM = normalizeHeightToMeters(rawHeight);
+  const ageYears = parseInt(ageInput, 10) || 0;
+  const bodyFat = parseFloat(bodyFatInput) || 0;
+
+  const fold1 = parseFloat(fold1Input) || 0;
+  const fold2 = parseFloat(fold2Input) || 0;
+  const fold3 = parseFloat(fold3Input) || 0;
+
+  // Compute Results Dinâmicos
   const metabolicResults = calculateMetabolicRates({
     formula,
     gender,
     weightKg,
-    heightCm,
+    heightCm: rawHeight,
     ageYears,
     bodyFatPercentage: bodyFat,
     activityFactor
@@ -57,13 +75,28 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
 
   const pollockResults = calculatePollock3Folds(gender, ageYears, fold1, fold2, fold3);
 
-  // Custom Macro Calculations
-  const calculatedProteinGrams = Math.round(weightKg * customProteinGPerKg);
+  // Custom Macro Calculations (Zero-safe)
+  const calculatedProteinGrams = weightKg > 0 ? Math.round(weightKg * customProteinGPerKg) : 0;
   const proteinCalories = calculatedProteinGrams * 4;
-  const fatCalories = Math.round(metabolicResults.get * 0.25);
+  const fatCalories = metabolicResults.get > 0 ? Math.round(metabolicResults.get * 0.25) : 0;
   const fatGrams = Math.round(fatCalories / 9);
-  const carbsCalories = Math.max(0, metabolicResults.get - proteinCalories - fatCalories);
+  const carbsCalories = metabolicResults.get > 0 ? Math.max(0, metabolicResults.get - proteinCalories - fatCalories) : 0;
   const carbsGrams = Math.round(carbsCalories / 4);
+
+  const proteinPct = metabolicResults.get > 0 ? Math.min(100, Math.round((proteinCalories / metabolicResults.get) * 100)) : 0;
+  const carbsPct = metabolicResults.get > 0 ? Math.min(100, Math.round((carbsCalories / metabolicResults.get) * 100)) : 0;
+  const fatPct = metabolicResults.get > 0 ? 25 : 0;
+
+  const handleResetCalculations = () => {
+    setWeightInput('');
+    setHeightInput('');
+    setAgeInput('');
+    setBodyFatInput('');
+    setActivityFactor(1.2);
+    setFold1Input('');
+    setFold2Input('');
+    setFold3Input('');
+  };
 
   // Filtered Food Table
   const filteredFoods = INITIAL_FOOD_DATABASE.filter(f => {
@@ -89,13 +122,24 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
           </p>
         </div>
 
-        <button
-          onClick={() => onOpenNutriaWithPrompt(`Nutria, faça uma revisão dietoterápica detalhada para um paciente ${gender}, ${ageYears} anos, ${weightKg}kg, ${heightCm}cm com GET de ${metabolicResults.get} kcal.`)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 hover:from-fuchsia-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg shadow-fuchsia-950/50 self-start sm:self-auto border border-fuchsia-400/40 transition-all hover:scale-105"
-        >
-          <Bot className="w-4 h-4 text-fuchsia-200" />
-          <span>Consultar NUTRIA sobre este Cálculo</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleResetCalculations}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#220743] hover:bg-[#2d0959] text-purple-200 hover:text-white rounded-xl text-xs font-bold border border-purple-700/60 transition-all"
+            title="Zerar todos os campos para nova avaliação"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Limpar Dados</span>
+          </button>
+
+          <button
+            onClick={() => onOpenNutriaWithPrompt(`Nutria, faça uma revisão dietoterápica detalhada para um paciente ${gender}, ${ageYears > 0 ? `${ageYears} anos` : 'idade a definir'}, ${weightKg > 0 ? `${weightKg}kg` : 'peso a definir'}, ${heightCm > 0 ? `${heightCm}cm` : 'altura a definir'} com GET de ${metabolicResults.get > 0 ? `${metabolicResults.get} kcal` : 'a calcular'}.`)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 hover:from-fuchsia-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg shadow-fuchsia-950/50 self-start sm:self-auto border border-fuchsia-400/40 transition-all hover:scale-105"
+          >
+            <Bot className="w-4 h-4 text-fuchsia-200" />
+            <span>Consultar NUTRIA sobre este Cálculo</span>
+          </button>
+        </div>
       </div>
 
       {/* Sub-tab Navigation */}
@@ -183,33 +227,42 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
                 <label className="text-xs text-purple-200 font-bold">Idade (anos):</label>
                 <input
                   type="number"
-                  value={ageYears}
-                  onChange={(e) => setAgeYears(Number(e.target.value))}
-                  className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2 text-xs text-white font-bold"
+                  value={ageInput}
+                  onChange={(e) => setAgeInput(e.target.value)}
+                  placeholder="ex: 28"
+                  className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2 text-xs text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
                 />
               </div>
             </div>
 
-            {/* Weight and Height */}
+            {/* Weight and Height with cm or m support */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-purple-200 font-bold">Peso Atual (kg):</label>
                 <input
                   type="number"
-                  step="0.5"
-                  value={weightKg}
-                  onChange={(e) => setWeightKg(Number(e.target.value))}
-                  className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2 text-xs text-white font-bold"
+                  step="0.1"
+                  value={weightInput}
+                  onChange={(e) => setWeightInput(e.target.value)}
+                  placeholder="ex: 75.0"
+                  className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2 text-xs text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-purple-200 font-bold">Altura (cm):</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs text-purple-200 font-bold">Altura:</label>
+                  <span className="text-[10px] text-fuchsia-300 font-semibold">
+                    {heightCm > 0 ? `${heightCm} cm (${heightM.toFixed(2)} m)` : 'cm ou metros'}
+                  </span>
+                </div>
                 <input
                   type="number"
-                  value={heightCm}
-                  onChange={(e) => setHeightCm(Number(e.target.value))}
-                  className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2 text-xs text-white font-bold"
+                  step="0.01"
+                  value={heightInput}
+                  onChange={(e) => setHeightInput(e.target.value)}
+                  placeholder="ex: 175 ou 1.75"
+                  className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2 text-xs text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
                 />
               </div>
             </div>
@@ -219,10 +272,11 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
               <label className="text-xs text-purple-200 font-bold">% Gordura Estimado (Bioimpedância/Dobras):</label>
               <input
                 type="number"
-                step="0.5"
-                value={bodyFat}
-                onChange={(e) => setBodyFat(Number(e.target.value))}
-                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2 text-xs text-white font-bold"
+                step="0.1"
+                value={bodyFatInput}
+                onChange={(e) => setBodyFatInput(e.target.value)}
+                placeholder="ex: 14.5"
+                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2 text-xs text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
               />
             </div>
 
@@ -246,7 +300,9 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
             <div className="pt-2 border-t border-purple-900/40">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-purple-200 font-bold">Meta de Proteína (g/kg):</span>
-                <span className="font-black text-fuchsia-300">{customProteinGPerKg} g/kg ({calculatedProteinGrams}g)</span>
+                <span className="font-black text-fuchsia-300">
+                  {customProteinGPerKg} g/kg {calculatedProteinGrams > 0 ? `(${calculatedProteinGrams}g)` : ''}
+                </span>
               </div>
               <input
                 type="range"
@@ -279,26 +335,36 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3.5 bg-[#1d0637] rounded-2xl border border-purple-800/40 text-center">
                   <span className="text-[11px] text-purple-200 block uppercase font-bold">Taxa Metabólica Basal</span>
-                  <span className="text-xl font-black text-white mt-1 block">{metabolicResults.tmb}</span>
-                  <span className="text-[10px] text-purple-200">kcal/dia</span>
+                  <span className="text-xl font-black text-white mt-1 block">
+                    {metabolicResults.tmb > 0 ? metabolicResults.tmb : '-'}
+                  </span>
+                  <span className="text-[10px] text-purple-200">kcal/dia (Mifflin)</span>
                 </div>
 
                 <div className="p-3.5 bg-[#1d0637] rounded-2xl border border-fuchsia-500/60 text-center bg-purple-950/40">
                   <span className="text-[11px] text-fuchsia-300 block uppercase font-bold">Gasto Total (GET)</span>
-                  <span className="text-xl font-black text-fuchsia-200 mt-1 block">{metabolicResults.get}</span>
-                  <span className="text-[10px] text-fuchsia-300">kcal/dia (Manutenção)</span>
+                  <span className="text-xl font-black text-fuchsia-200 mt-1 block">
+                    {metabolicResults.get > 0 ? metabolicResults.get : '-'}
+                  </span>
+                  <span className="text-[10px] text-fuchsia-300">kcal/dia (NAF {activityFactor})</span>
                 </div>
 
                 <div className="p-3.5 bg-[#1d0637] rounded-2xl border border-purple-800/40 text-center">
                   <span className="text-[11px] text-purple-200 block uppercase font-bold">IMC Atual</span>
-                  <span className="text-xl font-black text-white mt-1 block">{metabolicResults.bmi}</span>
-                  <span className="text-[10px] text-fuchsia-300 font-bold">{metabolicResults.bmiClassification.split(' ')[0]}</span>
+                  <span className="text-xl font-black text-white mt-1 block">
+                    {metabolicResults.bmi > 0 ? metabolicResults.bmi : '-'}
+                  </span>
+                  <span className="text-[10px] text-fuchsia-300 font-bold">
+                    {metabolicResults.bmi > 0 ? metabolicResults.bmiClassification.split(' ')[0] : 'Aguardando'}
+                  </span>
                 </div>
 
                 <div className="p-3.5 bg-[#1d0637] rounded-2xl border border-purple-800/40 text-center">
                   <span className="text-[11px] text-purple-200 block uppercase font-bold">Necessidade Hídrica</span>
-                  <span className="text-xl font-black text-purple-200 mt-1 block">{metabolicResults.waterRecommendationLiters} L</span>
-                  <span className="text-[10px] text-purple-200">35ml / kg / dia</span>
+                  <span className="text-xl font-black text-purple-200 mt-1 block">
+                    {metabolicResults.waterRecommendationLiters > 0 ? `${metabolicResults.waterRecommendationLiters} L` : '-'}
+                  </span>
+                  <span className="text-[10px] text-purple-200">35 mL / kg / dia</span>
                 </div>
               </div>
 
@@ -307,7 +373,7 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
                 <div className="p-3 bg-[#1d0637] rounded-2xl border border-purple-800/40 text-xs">
                   <span className="text-rose-400 font-bold block">Déficit (Emagrecimento):</span>
                   <span className="text-sm font-black text-white mt-0.5 block">
-                    {metabolicResults.get - 450} kcal
+                    {metabolicResults.get > 0 ? `${Math.max(0, metabolicResults.get - 450)} kcal` : '-'}
                   </span>
                   <span className="text-[10px] text-purple-200 font-medium">-450 kcal do GET</span>
                 </div>
@@ -315,7 +381,7 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
                 <div className="p-3 bg-[#1d0637] rounded-2xl border border-purple-800/40 text-xs">
                   <span className="text-purple-200 font-bold block">Eucalórica (Manutenção):</span>
                   <span className="text-sm font-black text-white mt-0.5 block">
-                    {metabolicResults.get} kcal
+                    {metabolicResults.get > 0 ? `${metabolicResults.get} kcal` : '-'}
                   </span>
                   <span className="text-[10px] text-purple-200 font-medium">Equilíbrio Energético</span>
                 </div>
@@ -323,7 +389,7 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
                 <div className="p-3 bg-[#1d0637] rounded-2xl border border-purple-800/40 text-xs">
                   <span className="text-fuchsia-300 font-bold block">Superávit (Hipertrofia):</span>
                   <span className="text-sm font-black text-white mt-0.5 block">
-                    {metabolicResults.get + 350} kcal
+                    {metabolicResults.get > 0 ? `${metabolicResults.get + 350} kcal` : '-'}
                   </span>
                   <span className="text-[10px] text-purple-200 font-medium">+350 kcal do GET</span>
                 </div>
@@ -344,12 +410,14 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
                 <div className="p-3.5 bg-[#1d0637] rounded-2xl border border-purple-800/40 space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-fuchsia-300">Proteínas (4 kcal/g)</span>
-                    <span className="font-black text-white">{calculatedProteinGrams}g ({proteinCalories} kcal) • {Math.round((proteinCalories / metabolicResults.get) * 100)}%</span>
+                    <span className="font-black text-white">
+                      {calculatedProteinGrams > 0 ? `${calculatedProteinGrams}g (${proteinCalories} kcal) • ${proteinPct}%` : '-'}
+                    </span>
                   </div>
                   <div className="w-full bg-[#120326] h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-fuchsia-500 to-purple-500 h-full rounded-full"
-                      style={{ width: `${Math.min(100, Math.round((proteinCalories / metabolicResults.get) * 100))}%` }}
+                      className="bg-gradient-to-r from-fuchsia-500 to-purple-500 h-full rounded-full transition-all duration-300"
+                      style={{ width: `${proteinPct}%` }}
                     ></div>
                   </div>
                 </div>
@@ -358,12 +426,14 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
                 <div className="p-3.5 bg-[#1d0637] rounded-2xl border border-purple-800/40 space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-purple-200">Carboidratos (4 kcal/g)</span>
-                    <span className="font-black text-white">{carbsGrams}g ({carbsCalories} kcal) • {Math.round((carbsCalories / metabolicResults.get) * 100)}%</span>
+                    <span className="font-black text-white">
+                      {carbsGrams > 0 ? `${carbsGrams}g (${carbsCalories} kcal) • ${carbsPct}%` : '-'}
+                    </span>
                   </div>
                   <div className="w-full bg-[#120326] h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full"
-                      style={{ width: `${Math.min(100, Math.round((carbsCalories / metabolicResults.get) * 100))}%` }}
+                      className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-300"
+                      style={{ width: `${carbsPct}%` }}
                     ></div>
                   </div>
                 </div>
@@ -372,12 +442,14 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
                 <div className="p-3.5 bg-[#1d0637] rounded-2xl border border-purple-800/40 space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-amber-300">Gorduras / Lipídios (9 kcal/g)</span>
-                    <span className="font-black text-white">{fatGrams}g ({fatCalories} kcal) • 25%</span>
+                    <span className="font-black text-white">
+                      {fatGrams > 0 ? `${fatGrams}g (${fatCalories} kcal) • ${fatPct}%` : '-'}
+                    </span>
                   </div>
                   <div className="w-full bg-[#120326] h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-amber-400 h-full rounded-full"
-                      style={{ width: `25%` }}
+                      className="bg-amber-400 h-full rounded-full transition-all duration-300"
+                      style={{ width: `${fatPct}%` }}
                     ></div>
                   </div>
                 </div>
@@ -411,9 +483,10 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
               <input
                 type="number"
                 step="0.5"
-                value={fold1}
-                onChange={(e) => setFold1(Number(e.target.value))}
-                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-sm text-white font-bold"
+                value={fold1Input}
+                onChange={(e) => setFold1Input(e.target.value)}
+                placeholder="ex: 12.0"
+                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-sm text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
               />
             </div>
 
@@ -424,9 +497,10 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
               <input
                 type="number"
                 step="0.5"
-                value={fold2}
-                onChange={(e) => setFold2(Number(e.target.value))}
-                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-sm text-white font-bold"
+                value={fold2Input}
+                onChange={(e) => setFold2Input(e.target.value)}
+                placeholder="ex: 18.0"
+                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-sm text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
               />
             </div>
 
@@ -435,9 +509,10 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
               <input
                 type="number"
                 step="0.5"
-                value={fold3}
-                onChange={(e) => setFold3(Number(e.target.value))}
-                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-sm text-white font-bold"
+                value={fold3Input}
+                onChange={(e) => setFold3Input(e.target.value)}
+                placeholder="ex: 15.0"
+                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-sm text-white font-bold placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
               />
             </div>
           </div>
@@ -446,15 +521,21 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
           <div className="p-5 bg-[#1d0637] rounded-2xl border border-purple-800/40 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
             <div>
               <span className="text-xs text-purple-200 block uppercase font-bold">Soma das 3 Dobras</span>
-              <span className="text-2xl font-black text-white mt-1 block">{fold1 + fold2 + fold3} mm</span>
+              <span className="text-2xl font-black text-white mt-1 block">
+                {(fold1 + fold2 + fold3) > 0 ? `${(fold1 + fold2 + fold3).toFixed(1)} mm` : '-'}
+              </span>
             </div>
             <div>
               <span className="text-xs text-purple-200 block uppercase font-bold">Densidade Corporal (DC)</span>
-              <span className="text-2xl font-black text-purple-200 mt-1 block">{pollockResults.density} g/cm³</span>
+              <span className="text-2xl font-black text-purple-200 mt-1 block">
+                {pollockResults.density > 0 ? `${pollockResults.density} g/cm³` : '-'}
+              </span>
             </div>
             <div>
               <span className="text-xs text-fuchsia-300 block uppercase font-bold">% Gordura Corporal (Siri)</span>
-              <span className="text-3xl font-black text-fuchsia-300 mt-1 block">{pollockResults.bodyFatPercentage}%</span>
+              <span className="text-3xl font-black text-fuchsia-300 mt-1 block">
+                {pollockResults.bodyFatPercentage > 0 ? `${pollockResults.bodyFatPercentage}%` : '-'}
+              </span>
             </div>
           </div>
 
