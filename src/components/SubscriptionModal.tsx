@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { SubscriptionPlan, UserAccount } from '../types';
-import { MercadoPagoCheckoutModal } from './MercadoPagoCheckoutModal';
 import { MercadoPagoLogo } from './MercadoPagoLogo';
 
 interface SubscriptionModalProps {
@@ -44,8 +43,6 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
   const [selectedPlanId, setSelectedPlanId] = useState<'free' | 'premium'>('premium');
-  const [isMercadoPagoModalOpen, setIsMercadoPagoModalOpen] = useState(false);
-  const [isLoadingCheckoutPro, setIsLoadingCheckoutPro] = useState(false);
 
   const MP_LINKS = {
     annual: 'https://mpago.la/1ZYT8kZ',
@@ -54,7 +51,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleOpenDirectSubscription = (cycle: 'annual' | 'monthly') => {
+  const handleOpenCheckoutPro = (cycle: 'annual' | 'monthly') => {
     const targetLink = cycle === 'annual' ? MP_LINKS.annual : MP_LINKS.monthly;
     confetti({
       particleCount: 50,
@@ -298,49 +295,29 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 </div>
               </div>
 
-              {/* Centered Main Subscription Action */}
+              {/* Centered Main Subscription Action - Checkout Pro Mercado Pago */}
               <div className="pt-2 flex flex-col items-center justify-center text-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsMercadoPagoModalOpen(true)}
-                  className="w-full sm:w-auto min-w-[280px] sm:min-w-[380px] px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-[#009EE3] hover:from-emerald-500 hover:to-[#0089C7] text-white font-black text-sm sm:text-base flex items-center justify-center gap-3 shadow-xl shadow-emerald-950/70 border border-emerald-300/50 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-                  id="btn-mp-checkout-transparente"
+                  onClick={() => handleOpenCheckoutPro(billingCycle)}
+                  className="w-full sm:w-auto min-w-[280px] sm:min-w-[420px] px-8 py-4 rounded-2xl bg-gradient-to-r from-[#009EE3] via-[#0089C7] to-[#0070A3] hover:from-[#0089C7] hover:to-[#005f8c] text-white font-black text-sm sm:text-base flex items-center justify-center gap-3 shadow-xl shadow-cyan-950/70 border border-cyan-300/50 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                  id="btn-mp-checkout-pro"
                 >
                   <MercadoPagoLogo variant="icon" className="w-6 h-6 shrink-0" />
                   <span>
                     {billingCycle === 'annual' 
-                      ? 'Checkout Transparente • Pagar R$ 399,00' 
-                      : 'Checkout Transparente • Pagar R$ 39,00'}
+                      ? 'Mercado Pago Checkout Pro • R$ 399,00/ano' 
+                      : 'Mercado Pago Checkout Pro • R$ 39,00/mês'}
                   </span>
-                  <ArrowRight className="w-4 h-4 text-emerald-200 shrink-0" />
-                </button>
-
-                <div className="flex items-center gap-3 w-full max-w-sm justify-center">
-                  <div className="h-px bg-purple-800/80 flex-1"></div>
-                  <span className="text-[11px] text-purple-400 font-bold uppercase">ou</span>
-                  <div className="h-px bg-purple-800/80 flex-1"></div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleOpenDirectSubscription(billingCycle)}
-                  className="w-full sm:w-auto min-w-[280px] sm:min-w-[340px] px-6 py-2.5 rounded-xl bg-[#220640] hover:bg-[#2f0857] text-purple-200 hover:text-white font-bold text-xs flex items-center justify-center gap-2 border border-purple-700/60 transition-all"
-                  id="btn-mp-assinar-plano-custom"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span>
-                    {billingCycle === 'annual' 
-                      ? 'Assinar via link direto Mercado Pago (R$ 399,00/ano)' 
-                      : 'Assinar via link direto Mercado Pago (R$ 39,00/mês)'}
-                  </span>
+                  <ExternalLink className="w-4 h-4 text-cyan-200 shrink-0" />
                 </button>
 
                 <p className="text-[11px] text-purple-300/90 flex items-center gap-1.5 font-medium mt-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                   <span>
                     {billingCycle === 'annual' 
-                      ? 'Economia de 16% no plano anual • Pagamento processado com segurança pelo Mercado Pago'
-                      : 'Cobrança mensal automática • Cancele quando quiser diretamente no Mercado Pago'}
+                      ? 'Economia de 16% no plano anual • Checkout Pro com Pix, Cartão em até 12x, Saldo e Boleto'
+                      : 'Cobrança mensal recorrente • Checkout Pro seguro Mercado Pago, cancele quando desejar'}
                   </span>
                 </p>
               </div>
@@ -379,22 +356,6 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         </div>
 
       </div>
-
-      {/* Full Mercado Pago Multi-method Modal */}
-      {isMercadoPagoModalOpen && (
-        <MercadoPagoCheckoutModal
-          isOpen={isMercadoPagoModalOpen}
-          onClose={() => setIsMercadoPagoModalOpen(false)}
-          planId={billingCycle === 'annual' ? 'premium_anual' : 'premium_mensal'}
-          billingCycle={billingCycle}
-          userAccount={userAccount}
-          onPaymentSuccess={(plan) => {
-            setIsMercadoPagoModalOpen(false);
-            onSelectPlan(plan, billingCycle);
-            onClose();
-          }}
-        />
-      )}
     </div>
   );
 };

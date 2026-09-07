@@ -158,7 +158,7 @@ export const MercadoPagoSubscriptionsView: React.FC<MercadoPagoSubscriptionsView
                 id="btn-mp-anual-direct"
               >
                 <MercadoPagoLogo variant="icon" className="w-4 h-4 shrink-0" />
-                <span>Mercado Pago Assinar Plano • R$ 399,00</span>
+                <span>Mercado Pago Checkout Pro • R$ 399,00</span>
                 <ExternalLink className="w-3.5 h-3.5 text-cyan-200 shrink-0" />
               </button>
             </div>
@@ -184,7 +184,7 @@ export const MercadoPagoSubscriptionsView: React.FC<MercadoPagoSubscriptionsView
                 id="btn-mp-mensal-direct"
               >
                 <MercadoPagoLogo variant="icon" className="w-4 h-4 shrink-0" />
-                <span>Mercado Pago Assinar Plano • R$ 39,00</span>
+                <span>Mercado Pago Checkout Pro • R$ 39,00</span>
                 <ExternalLink className="w-3.5 h-3.5 text-fuchsia-200 shrink-0" />
               </button>
             </div>
@@ -866,7 +866,7 @@ export const MercadoPagoSubscriptionsView: React.FC<MercadoPagoSubscriptionsView
             id="btn-cta-mp-anual"
           >
             <MercadoPagoLogo variant="icon" className="w-5 h-5 shrink-0" />
-            <span>Mercado Pago Assinar Plano • R$ 399,00/ano</span>
+            <span>Mercado Pago Checkout Pro • R$ 399,00/ano</span>
             <ExternalLink className="w-3.5 h-3.5 text-cyan-200 shrink-0" />
           </button>
 
@@ -877,7 +877,7 @@ export const MercadoPagoSubscriptionsView: React.FC<MercadoPagoSubscriptionsView
             id="btn-cta-mp-mensal"
           >
             <MercadoPagoLogo variant="icon" className="w-5 h-5 shrink-0" />
-            <span>Mercado Pago Assinar Plano • R$ 39,00/mês</span>
+            <span>Mercado Pago Checkout Pro • R$ 39,00/mês</span>
             <ExternalLink className="w-3.5 h-3.5 text-fuchsia-200 shrink-0" />
           </button>
 
