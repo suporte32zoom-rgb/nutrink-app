@@ -87,35 +87,37 @@ export function getClientGeminiModel(): string {
  * Obtém a chave da API do Gemini a partir do ambiente do cliente
  */
 export function getClientGeminiApiKey(): string {
-  // 1. Variável Vite padrão
+  // 1. Variável Vite padrão NUTRINK ou GEMINI
   try {
-    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) {
-      const key = String(import.meta.env.VITE_GEMINI_API_KEY).trim();
-      if (key.length > 5) return key;
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      const nutriaKey = (import.meta.env as any).VITE_NUTRINK_GEMINI_API_KEY || (import.meta.env as any).NUTRINK_GEMINI_API_KEY;
+      if (nutriaKey && String(nutriaKey).trim().length > 5) return String(nutriaKey).trim();
+
+      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || (import.meta.env as any).GEMINI_API_KEY;
+      if (geminiKey && String(geminiKey).trim().length > 5) return String(geminiKey).trim();
     }
   } catch {}
 
-  // 2. Variável Next/CRA pública
+  // 2. Variável process.env pública ou embutida
   try {
-    if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_GEMINI_API_KEY) {
-      const key = String(process.env.NEXT_PUBLIC_GEMINI_API_KEY).trim();
-      if (key.length > 5) return key;
+    if (typeof process !== 'undefined' && process.env) {
+      const nutriaKey = process.env.NUTRINK_GEMINI_API_KEY || (process.env as any).NEXT_PUBLIC_NUTRINK_GEMINI_API_KEY;
+      if (nutriaKey && String(nutriaKey).trim().length > 5) return String(nutriaKey).trim();
+
+      const key = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      if (key && String(key).trim().length > 5) return String(key).trim();
     }
   } catch {}
 
-  // 3. Variável process.env padrão Vite
-  try {
-    if (typeof process !== 'undefined' && process.env?.VITE_GEMINI_API_KEY) {
-      const key = String(process.env.VITE_GEMINI_API_KEY).trim();
-      if (key.length > 5) return key;
-    }
-  } catch {}
-
-  // 4. Injeção global no window ou localStorage
+  // 3. Injeção global no window ou localStorage
   if (typeof window !== 'undefined') {
     const win = window as any;
-    if (win.NEXT_PUBLIC_GEMINI_API_KEY && typeof win.NEXT_PUBLIC_GEMINI_API_KEY === 'string') {
-      return win.NEXT_PUBLIC_GEMINI_API_KEY.trim();
+    const winKey = win.NUTRINK_GEMINI_API_KEY || win.VITE_NUTRINK_GEMINI_API_KEY || win.NEXT_PUBLIC_GEMINI_API_KEY || win.VITE_GEMINI_API_KEY;
+    if (winKey && typeof winKey === 'string' && winKey.trim().length > 5) {
+      return winKey.trim();
+    }
+    if (win.process?.env?.NUTRINK_GEMINI_API_KEY) {
+      return String(win.process.env.NUTRINK_GEMINI_API_KEY).trim();
     }
     if (win.process?.env?.NEXT_PUBLIC_GEMINI_API_KEY) {
       return String(win.process.env.NEXT_PUBLIC_GEMINI_API_KEY).trim();
@@ -488,9 +490,36 @@ export function getGenAIClient(apiKey: string): GoogleGenAI {
 export async function callNutriaDirect(params: NutriaCallParams): Promise<NutriaResponse> {
   const apiKey = getClientGeminiApiKey();
 
-  // Se não houver chave no frontend, aciona o motor clínico de segurança
+  // Se não houver chave no frontend, tenta a rota segura do backend (/api/nutria) antes do fallback determinístico
   if (!apiKey) {
-    console.warn('[NUTRIA AI] Chave Gemini não encontrada no cliente. Utilizando motor clínico de contingência.');
+    try {
+      const resp = await fetch('/api/nutria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: params.message,
+          conversationHistory: params.conversationHistory,
+          patientContext: params.activePatient,
+          patientsContext: params.patients,
+          userAccount: params.userAccount,
+          context: params.appContext
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.reply && typeof data.reply === 'string' && data.reply.trim().length > 0) {
+          return {
+            reply: data.reply.trim(),
+            actionExecuted: data.actionExecuted,
+            model: data.model || 'gemini'
+          };
+        }
+      }
+    } catch (backendErr) {
+      console.warn('[NUTRIA AI] Tentativa via rota backend /api/nutria falhou:', backendErr);
+    }
+
+    console.warn('[NUTRIA AI] Chave Gemini não encontrada no cliente e backend indisponível. Utilizando motor clínico de contingência.');
     return generateFallbackClinicalResponse(params.message, params);
   }
 

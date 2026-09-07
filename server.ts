@@ -143,10 +143,21 @@ const inMemoryPayments = new Map<string, {
 
 // Lazy initializer for Gemini client
 let genAIClient: GoogleGenAI | null = null;
+let currentGenAIApiKey = "";
+
 function getGenAI(): GoogleGenAI | null {
-  const apiKey = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").trim();
+  const apiKey = (
+    process.env.NUTRINK_GEMINI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.VITE_GEMINI_API_KEY ||
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+    ""
+  ).trim();
+
   if (!apiKey) return null;
-  if (!genAIClient) {
+
+  if (!genAIClient || currentGenAIApiKey !== apiKey) {
+    currentGenAIApiKey = apiKey;
     genAIClient = new GoogleGenAI({
       apiKey: apiKey,
       httpOptions: {
@@ -328,7 +339,14 @@ const gerarPlanoAlimentarTool: FunctionDeclaration = {
 
 // API Endpoints
 app.get("/api/health", (req: Request, res: Response) => {
-  const hasGemini = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 5);
+  const activeKey = (
+    process.env.NUTRINK_GEMINI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.VITE_GEMINI_API_KEY ||
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+    ""
+  ).trim();
+  const hasGemini = Boolean(activeKey && activeKey.length > 5);
 
   res.json({ 
     status: "ok", 
