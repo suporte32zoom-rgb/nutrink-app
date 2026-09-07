@@ -357,12 +357,7 @@ Seu consultório foi inicializado com sucesso (${newUser.crn} • ${newUser.spec
   const DEFAULT_NUTRIA_WELCOME: NutriaMessage = {
     id: 'msg-init-1',
     role: 'assistant',
-    content: `Olá, Doutor(a)! Eu sou a **NUTRIA**, sua inteligência operacional e copiloto clínico no ecossistema NutrinK.
-
-Como posso otimizar sua rotina hoje? Você pode me solicitar:
-- **Operacional**: *"Cadastre um novo paciente chamado Rodrigo, 32 anos, 80kg"*, *"Agende consulta para amanhã às 15h"*, *"Lance uma receita de R$ 350 via PIX"*.
-- **Clínico**: *"Calcule a TMB e GET de um paciente de 75kg e 178cm"*, *"Sugira o cardápio e aporte de proteína para hipertrofia"*, *"Interprete os exames de ferritina e B12"*.
-- **Planos**: *"Quais são os planos de assinatura do NutrinK?"*`,
+    content: 'Olá, Doutor(a)! Como posso te apoiar agora?',
     timestamp: '08:00'
   };
 
@@ -374,6 +369,10 @@ Como posso otimizar sua rotina hoje? Você pode me solicitar:
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            // Atualiza saudação antiga prolixa para a nova saudação curta
+            if (parsed[0]?.role === 'assistant' && typeof parsed[0]?.content === 'string' && parsed[0].content.includes('Eu sou a **NUTRIA**')) {
+              parsed[0].content = 'Olá, Doutor(a)! Como posso te apoiar agora?';
+            }
             return parsed;
           }
         }
@@ -626,14 +625,16 @@ Seu acesso ao **Plano ${plan === 'premium_anual' ? 'Premium Anual (R$ 399,00 à 
         message: userInput,
         activePatient: activePatient,
         patients: patients,
+        appointments: appointments,
+        transactions: transactions,
         userAccount: effectiveUserAccount,
-        conversationHistory: nutriaMessages.slice(-6).map(m => ({
+        conversationHistory: nutriaMessages.slice(-8).map(m => ({
           role: m.role,
           content: m.content
         })),
         appContext: {
           patientsCount: patients.length,
-          todayAppointmentsCount: appointments.filter(a => a.date === '2026-08-15').length,
+          todayAppointmentsCount: appointments.length,
           monthlyRevenue: totalRevenue,
           monthlyExpenses: totalExpenses,
           userPlan: effectiveUserAccount.plan

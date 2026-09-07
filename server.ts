@@ -363,8 +363,9 @@ app.get("/api/health", (req: Request, res: Response) => {
 const GEMINI_MODELS = [
   ...(process.env.VITE_GEMINI_MODEL ? [process.env.VITE_GEMINI_MODEL.trim()] : []),
   "gemini-3.8-flash",
-  "gemini-flash-latest",
-  "gemini-3.1-flash-lite"
+  "gemini-3.1-flash-lite",
+  "gemini-3.1-pro-preview",
+  "gemini-flash-latest"
 ];
 
 async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
@@ -378,7 +379,7 @@ async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
       });
       if (result) {
         console.log(`[NutrinK AI Engine] Sucesso com Google Gemini (${model})!`);
-        return result;
+        return { result, model };
       }
     } catch (err: any) {
       lastError = err;
@@ -391,72 +392,8 @@ async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
   }
   throw lastError || new Error("Modelos Gemini indisponíveis temporariamente.");
 }
-function generateDetailedClinicalReportFallback(patient: any, requestPrompt: string): string {
-  if (!patient || !patient.name) {
-    return `Nenhum paciente cadastrado até o momento. Cadastre seu primeiro paciente no menu **"Pacientes & Prontuários"** para que eu possa auxiliar na elaboração de condutas e planos alimentares.`;
-  }
 
-  const name = patient.name;
-  const age = patient.age || 30;
-  const gender = patient.gender === 'feminino' ? 'Feminino' : 'Masculino';
-  const objective = patient.objective || 'emagrecimento';
-  const initialWeight = Number(patient.initialWeightKg || 70.0);
-  const currentWeight = Number(patient.currentWeightKg || 70.0);
-  const targetWeight = Number(patient.targetWeightKg || 65.0);
-  const height = Number(patient.heightCm || 170);
-  const bmi = patient.bmi || (currentWeight / ((height/100) ** 2)).toFixed(1);
-  const bf = patient.bodyFatPercentage || 22.0;
-  const tmb = patient.tmb || 1500;
-  const getVal = patient.get || 2000;
-  const weightLoss = (initialWeight - currentWeight).toFixed(1);
-
-  return `# 📋 NUTRINK AI • RELATÓRIO CLÍNICO NUTRICIONAL
-
-**Paciente:** ${name} | **Idade:** ${age} anos | **Gênero:** ${gender}  
-**Objetivo:** ${objective.replace('_', ' ').toUpperCase()}  
-**Data:** ${new Date().toLocaleDateString('pt-BR')} | **Copiloto Clínico:** NUTRIA AI  
-
----
-
-## 1. 📊 Evolução Antropométrica & Composição Corporal
-
-> **Parecer Evolutivo:** Paciente em acompanhamento nutricional estruturado com acompanhamento de metas antropométricas e metabólicas.
-
-| Parâmetro | Inicial | Atual | Meta Final |
-| :--- | :--- | :--- | :--- |
-| **Peso Total** | ${initialWeight.toFixed(1)} kg | **${currentWeight.toFixed(1)} kg** | ${targetWeight.toFixed(1)} kg |
-| **IMC** | ${bmi} kg/m² | **${bmi} kg/m²** | Normal |
-| **% Gordura (%BF)** | ${bf}% | **${bf}%** | Faixa Saudável |
-
----
-
-## 2. 🔬 Diretrizes, Suplementação & Hidratação
-
-- **Meta Hídrica:** **${((currentWeight * 35) / 1000).toFixed(1)} L / dia** *(35 a 40 mL/kg)*
-- **Fibras Totais:** 25g a 35g/dia *(Fontes: vegetais, aveia, sementes e leguminosas)*
-- **Suplementação e Micronutrientes:** Conforme anamnese e exames laboratoriais vinculados.
-
----
-
-## 3. 🥗 Metas Energéticas & Distribuição de Macronutrientes
-
-- **Taxa Metabólica Basal (TMB):** **${tmb} kcal/dia** *(Mifflin-St Jeor)*
-- **Gasto Energético Total (GET):** **${getVal} kcal/dia**
-
----
-
-## 4. 📝 Parecer Clínico & Conduta Terapêutica
-
-> **1. Prescrição Dietética:** Plano estruturado e adaptado às preferências e rotina do paciente.
-
-> **2. Próximo Retorno:** Reavaliação antropométrica e ajuste dietoterápico agendados no consultório.
-
----
-
-> **Nutria AI** • *O Cérebro Inteligente do NutrinK*`;
-}
-
-app.post("/api/nutria/chat", async (req: Request, res: Response) => {
+app.post(["/api/nutria/chat", "/api/nutria"], async (req: Request, res: Response) => {
   try {
     const { 
       message, 
@@ -466,6 +403,8 @@ app.post("/api/nutria/chat", async (req: Request, res: Response) => {
       activePatientContext = null,
       patientContext = null,
       patients = [],
+      appointments = [],
+      transactions = [],
       userAccount = null
     } = req.body;
 
@@ -490,74 +429,15 @@ app.post("/api/nutria/chat", async (req: Request, res: Response) => {
       }
     }
 
-    // Check if this is an institutional / legal / about page request
-    const checkInstitutionalPage = (msg: string): string | null => {
-      const lower = msg.toLowerCase();
-      if (lower.includes('privacidade') || lower.includes('lgpd') || lower.includes('13.709') || (lower.includes('dados') && lower.includes('segurança'))) {
-        return 'privacidade_lgpd';
-      }
-      if (lower.includes('termos de serviço') || lower.includes('termos de servico') || lower.includes('termos de uso') || lower.includes('responsabilidade técnica') || lower.includes('responsabilidade tecnica')) {
-        return 'termos_servico';
-      }
-      if (lower.includes('uso aceitável') || lower.includes('uso aceitavel') || lower.includes('conduta') || lower.includes('proibição') || lower.includes('proibicao')) {
-        return 'politica_uso_aceitavel';
-      }
-      if (lower.includes('fale conosco') || lower.includes('suporte') || lower.includes('contato') || lower.includes('atendimento') || lower.includes('telefone') || lower.includes('whatsapp')) {
-        return 'fale_conosco';
-      }
-      if (lower.includes('metodologia') || lower.includes('fontes') || lower.includes('fatos') || lower.includes('embasamento') || lower.includes('fórmula') || lower.includes('formula') || lower.includes('cunningham') || lower.includes('mifflin') || lower.includes('harris-benedict') || lower.includes('fao/oms')) {
-        return 'metodologia';
-      }
-      if (lower.includes('depoimento') || lower.includes('depoimentos') || lower.includes('histórias de sucesso') || lower.includes('historias de sucesso') || lower.includes('clientes') || lower.includes('casos de sucesso')) {
-        return 'clientes';
-      }
-      if (lower.includes('sobre o nutrink') || lower.includes('por que escolher') || lower.includes('visão institucional') || lower.includes('visao institucional') || lower.includes('quem somos')) {
-        return 'sobre';
-      }
-      if (lower.includes('recursos') || lower.includes('software para') || lower.includes('módulos') || lower.includes('modulos') || lower.includes('funcionalidades')) {
-        return 'recursos';
-      }
-      if (lower.includes('plano') || lower.includes('planos') || lower.includes('preço') || lower.includes('preco') || lower.includes('preços') || lower.includes('precos') || lower.includes('quanto custa') || lower.includes('tabela comparativa')) {
-        return 'planos';
-      }
-      if (lower.includes('acessar') || lower.includes('login') || lower.includes('autenticação') || lower.includes('autenticacao') || lower.includes('entrar na conta')) {
-        return 'acessar';
-      }
-      if (lower.includes('início') || lower.includes('inicio') || lower.includes('topo') || lower.includes('ecossistema nutrink') || lower.includes('apresentação visual')) {
-        return 'inicio';
-      }
-      return null;
-    };
-
-    const matchedInstitutionalKey = checkInstitutionalPage(message);
-    if (matchedInstitutionalKey && INSTITUTIONAL_PAGES[matchedInstitutionalKey]) {
-      const pageDoc = INSTITUTIONAL_PAGES[matchedInstitutionalKey];
-      res.json({
-        reply: pageDoc.markdownContent,
-        content: pageDoc.markdownContent,
-        actionExecuted: {
-          type: "OPEN_INSTITUTIONAL_DOC",
-          payload: { pageId: pageDoc.id, pageTitle: pageDoc.title },
-          summary: `Carregada página institucional: ${pageDoc.title}`
-        }
+    const ai = getGenAI();
+    if (!ai) {
+      res.status(503).json({
+        error: "Chave da API Gemini não configurada no servidor.",
+        reply: "Desculpe, a chave do Google Gemini não está ativa no servidor. Verifique a variável de ambiente.",
+        content: "Desculpe, a chave do Google Gemini não está ativa no servidor. Verifique a variável de ambiente."
       });
       return;
     }
-
-    // Check if this is a request for a detailed clinical report or analysis
-    const isClinicalReportRequest = 
-      messageLower.includes("relatório") || 
-      messageLower.includes("relatorio") || 
-      messageLower.includes("parecer") || 
-      messageLower.includes("minucioso") || 
-      messageLower.includes("antropométrica") || 
-      messageLower.includes("antropometrica") || 
-      messageLower.includes("micronutrientes") || 
-      messageLower.includes("macros") || 
-      messageLower.includes("plano alimentar") ||
-      messageLower.includes("exames");
-
-    const ai = getGenAI();
 
     // Brasilia Time Calculation
     const brasiliaDateStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -566,82 +446,152 @@ app.post("/api/nutria/chat", async (req: Request, res: Response) => {
     const professionalName = userAccount?.name || 'Doutor(a)';
     const professionalTitle = userAccount?.crn?.includes('CRM') ? 'Médico Nutrólogo' : (userAccount?.specialty?.toLowerCase().includes('nutrolog') ? 'Nutrólogo(a)' : 'Nutricionista Clínico(a)');
 
-    // Prepare contextual prompt with full clinical patient snapshot
+    // Context summary for clinic management
+    const totalPatientsCount = patients.length > 0 ? patients.length : (mergedAppContext.patientsCount || 0);
+    const todayAptsCount = appointments.length > 0 ? appointments.length : (mergedAppContext.todayAppointmentsCount || 0);
+    const monthlyRev = mergedAppContext.monthlyRevenue ?? 0;
+    const monthlyExp = mergedAppContext.monthlyExpenses ?? 0;
+    const netBalance = monthlyRev - monthlyExp;
+
+    const appointmentsSummary = Array.isArray(appointments) && appointments.length > 0
+      ? appointments.slice(0, 10).map((a: any, i: number) => `  ${i + 1}. ${a.date} às ${a.time} - Paciente: ${a.patientName || a.patientId} (${a.modality || a.type || 'Presencial'}) [Status: ${a.status || 'Confirmada'}]${a.value ? ` R$ ${a.value}` : ''}`).join('\n')
+      : '  (Nenhuma consulta listada no momento)';
+
+    const transactionsSummary = Array.isArray(transactions) && transactions.length > 0
+      ? transactions.slice(0, 8).map((t: any, i: number) => `  ${i + 1}. [${t.type === 'receita' ? 'RECEITA' : 'DESPESA'}] R$ ${Number(t.amount).toFixed(2)} - ${t.description} (${t.paymentMethod || 'PIX'}) - Data: ${t.date}`).join('\n')
+      : '  (Nenhuma transação recente listada)';
+
+    const patientsListSummary = Array.isArray(patients) && patients.length > 0
+      ? patients.map((p: any, i: number) => `  ${i + 1}. ${p.name} (${p.age ? p.age + ' anos' : 'idade n/i'}, ${p.gender || 'n/i'}) - Peso: ${p.currentWeightKg || 'n/i'} kg - Objetivo: ${p.objective || 'Acompanhamento'}`).join('\n')
+      : '  (Nenhum paciente cadastrado no momento)';
+
+    // Prepare contextual prompt with full clinic and patient snapshot
     const contextSnippet = `
-[CONTEXTO ATUAL DO CONSULTÓRIO NUTRINK - MODO PRODUÇÃO REAL]
+[CONTEXTO INTEGRADO DO CONSULTÓRIO NUTRINK]:
 - Profissional Responsável: ${professionalName} (${professionalTitle} • Registro: ${userAccount?.crn || 'Ativo'})
-- Data Atual (Horário Oficial de Brasília): ${brasiliaDateStr} (${brasiliaIsoDate}) às ${brasiliaTime}
-- Modo de Atendimento: ATIVO NO CONSULTÓRIO NUTRINK
-- Total de Pacientes Cadastrados no Consultório: ${patients.length}
-- Faturamento do Mês: R$ ${(mergedAppContext.monthlyRevenue ?? 0).toFixed(2)} | Despesas: R$ ${(mergedAppContext.monthlyExpenses ?? 0).toFixed(2)}
-- Paciente em Foco / Mencionada: ${targetPatient ? JSON.stringify(targetPatient, null, 2) : (patients.length === 0 ? "Nenhum paciente cadastrado (base zerada)" : "Nenhum paciente selecionado")}
-- Banco de Pacientes Reais Cadastrados: ${JSON.stringify(patients.map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    age: p.age,
-    gender: p.gender,
-    objective: p.objective,
-    initialWeightKg: p.initialWeightKg,
-    currentWeightKg: p.currentWeightKg,
-    targetWeightKg: p.targetWeightKg,
-    heightCm: p.heightCm,
-    bmi: p.bmi,
-    bodyFatPercentage: p.bodyFatPercentage,
-    tmb: p.tmb,
-    get: p.get,
-    evolutionHistory: p.evolutionHistory,
-    anamnese: p.anamnese,
-    labExams: p.labExams
-  })), null, 2)}
+- Data/Hora Oficial (Brasília): ${brasiliaDateStr} (${brasiliaIsoDate}) às ${brasiliaTime}
+- Total de Pacientes no Consultório: ${totalPatientsCount}
+- Consultas Hoje na Grade: ${todayAptsCount}
+- Faturamento do Mês: R$ ${monthlyRev.toFixed(2)} | Despesas: R$ ${monthlyExp.toFixed(2)} | Saldo Líquido: R$ ${netBalance.toFixed(2)}
+
+[AGENDA E CONSULTAS DO CONSULTÓRIO]:
+${appointmentsSummary}
+
+[LANÇAMENTOS FINANCEIROS DO CONSULTÓRIO]:
+${transactionsSummary}
+
+[BANCO DE PACIENTES]:
+${patientsListSummary}
+
+[PACIENTE ATIVO EM FOCO / MENCIONADO]:
+${targetPatient ? JSON.stringify({
+  id: targetPatient.id,
+  name: targetPatient.name,
+  age: targetPatient.age,
+  gender: targetPatient.gender,
+  objective: targetPatient.objective,
+  initialWeightKg: targetPatient.initialWeightKg,
+  currentWeightKg: targetPatient.currentWeightKg,
+  targetWeightKg: targetPatient.targetWeightKg,
+  heightCm: targetPatient.heightCm,
+  bmi: targetPatient.bmi,
+  bodyFatPercentage: targetPatient.bodyFatPercentage,
+  muscleMassPercentage: targetPatient.muscleMassPercentage,
+  tmb: targetPatient.tmb,
+  get: targetPatient.get,
+  activityFactor: targetPatient.activityFactor,
+  evolutionHistory: targetPatient.evolutionHistory,
+  anamnese: targetPatient.anamnese,
+  labExams: targetPatient.labExams,
+  mealPlan: targetPatient.mealPlan
+}, null, 2) : "Nenhum paciente específico selecionado."}
 `;
+
+    // Normalização das mensagens de histórico
+    const rawTurns: Array<{ role: 'user' | 'model'; text: string }> = [];
+    if (Array.isArray(conversationHistory)) {
+      for (const item of conversationHistory) {
+        if (!item || !item.content) continue;
+        const text = String(item.content).trim();
+        if (!text) continue;
+        const role: 'user' | 'model' = (item.role === 'model' || item.role === 'assistant') ? 'model' : 'user';
+        rawTurns.push({ role, text });
+      }
+    }
+
+    const normalizedMessage = message.trim();
+    if (rawTurns.length > 0 && rawTurns[rawTurns.length - 1].role === 'user' && rawTurns[rawTurns.length - 1].text === normalizedMessage) {
+      rawTurns.pop();
+    }
+
+    const slicedTurns = rawTurns.slice(-8);
+    const alternatingContents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+
+    for (const turn of slicedTurns) {
+      if (alternatingContents.length === 0) {
+        alternatingContents.push({ role: turn.role, parts: [{ text: turn.text }] });
+        continue;
+      }
+      const prevTurn = alternatingContents[alternatingContents.length - 1];
+      if (prevTurn.role === turn.role) {
+        prevTurn.parts[0].text += `\n\n${turn.text}`;
+      } else {
+        alternatingContents.push({ role: turn.role, parts: [{ text: turn.text }] });
+      }
+    }
+
+    const userPromptText = `${contextSnippet}\n\n[MENSAGEM DO USUÁRIO]:\n${normalizedMessage}`;
+    if (alternatingContents.length > 0 && alternatingContents[alternatingContents.length - 1].role === 'user') {
+      alternatingContents[alternatingContents.length - 1].parts[0].text = userPromptText;
+    } else {
+      alternatingContents.push({
+        role: 'user',
+        parts: [{ text: userPromptText }]
+      });
+    }
 
     let replyText = "";
     let actionExecuted: any = null;
-    let successfulProvider = "";
+    let usedModel = "gemini-3.8-flash";
 
-    // 1. EXECUÇÃO EXCLUSIVA COM GOOGLE GEMINI (Multi-Modelos Oficiais)
-    if (ai) {
-      try {
-        const contents: any[] = [
-          {
-            role: "user",
-            parts: [{ 
-              text: `${contextSnippet}
-
-INSTRUÇÃO CLÍNICA MANDATÓRIA:
-1. Se a base de pacientes estiver vazia (total = 0) e o usuário solicitar dados, relatórios ou planos de pacientes sem fornecer novos dados clínicos na mensagem, responda: "Nenhum paciente cadastrado até o momento. Cadastre seu primeiro paciente no menu 'Pacientes & Prontuários' para que eu possa auxiliar na elaboração de condutas e planos alimentares."
-2. Se o usuário solicitar relatórios clínicos de pacientes cadastrados ou fornecer dados clínicos completos, gere um documento COMPLETO, EXAUSTIVO, ESTRUTURADO EM TABELAS MARKDOWN DETALHADAS com embasamento científico.
-
-Solicitação do usuário: ${message}` 
-            }]
-          }
-        ];
-
-        const response = await generateContentWithFallback(ai, {
-          contents: contents,
-          config: {
-            systemInstruction: NUTRIA_SYSTEM_INSTRUCTION + `
-[REGRA DE PRODUÇÃO REAL & BASE ZERADA]
-- O sistema opera em MODO DE PRODUÇÃO REAL.
-- Não existem pacientes pré-cadastrados fictícios. Se a lista de pacientes fornecida no contexto estiver vazia (total = 0) e a solicitação do usuário depender de um paciente cadastrado, oriente o profissional com: "Nenhum paciente cadastrado até o momento. Cadastre seu primeiro paciente no menu 'Pacientes & Prontuários' para que eu possa auxiliar na elaboração de condutas e planos alimentares."
-- Quando for solicitado relatório ou plano para um paciente real cadastrado, gere o documento clínico completo em Markdown puro sem tags HTML.
+    const { result, model: detectedModel } = await generateContentWithFallback(ai, {
+      contents: alternatingContents,
+      config: {
+        systemInstruction: NUTRIA_SYSTEM_INSTRUCTION + `
+[DIRETRIZES DE ATUAÇÃO DA NÚTRIA]:
+1. Você é a NÚTRIA, a inteligência clínica máxima e copiloto operacional do consultório NutrinK.
+2. Responda DIRETAMENTE, de forma dinâmica, científica e completa a TODA e QUALQUER pergunta do profissional de saúde.
+3. NUNCA utilize templates estáticos ou mensagens evasivas pré-prontas como "estou à disposição no consultório".
+4. Você tem total liberdade e conhecimento para:
+   - Calcular e explicar TMB e GET (Mifflin-St Jeor, Cunningham, Harris-Benedict) para qualquer caso clínico (seja do paciente em tela ou dados fornecidos diretamente na mensagem).
+   - Elaborar cardápios, planos alimentares completos com macros (P/C/G) e micros calculados, e tabelas de substituição (TACO/USDA).
+   - Prescrever suplementação, fitoterapia e fórmulas manipuladas com dosagens e posologia exatas.
+   - Interpretar exames laboratoriais (hemograma, ferritina, perfil lipídico, glicemia, tireoide, etc.).
+   - Responder a perguntas operacionais e de gestão clínica sobre pacientes, agenda e financeiro usando os dados do [CONTEXTO INTEGRADO DO CONSULTÓRIO NUTRINK].
+5. Formate as respostas em Markdown limpo, sofisticado e legível, com tabelas para macros/alimentos quando pertinente.
 `,
-            temperature: 0.3,
-            tools: [{
-              functionDeclarations: [
-                abrirPaginaInstitucionalTool,
-                navegarParaTelaTool,
-                cadastrarPacienteTool,
-                agendarConsultaTool,
-                lancarFinanceiroTool,
-                gerarPlanoAlimentarTool
-              ]
-            }]
-          }
-        });
+        temperature: 0.5,
+        tools: [{
+          functionDeclarations: [
+            abrirPaginaInstitucionalTool,
+            navegarParaTelaTool,
+            cadastrarPacienteTool,
+            agendarConsultaTool,
+            lancarFinanceiroTool,
+            gerarPlanoAlimentarTool
+          ]
+        }]
+      }
+    });
 
-        const functionCalls = response.functionCalls;
-        replyText = response.text || "";
+    if (detectedModel) {
+      usedModel = detectedModel;
+    }
+
+    replyText = result?.text || "";
+    const candidates = (result as any)?.candidates;
+    const firstCandidate = candidates && candidates[0];
+    const functionCalls = firstCandidate?.content?.parts?.filter((p: any) => p.functionCall)?.map((p: any) => p.functionCall) || result.functionCalls;
 
       if (functionCalls && functionCalls.length > 0) {
         const call = functionCalls[0];
@@ -779,29 +729,16 @@ Solicitação do usuário: ${message}`
         }
       }
 
-        successfulProvider = "gemini";
-      } catch (geminiError: any) {
-        console.warn("[NutrinK AI] Instabilidade no Google Gemini. Acionando motor de contingência clínica...", geminiError?.message || geminiError);
-      }
-    }
-
-    // 2. CONTINGÊNCIA CLÍNICA DETERMINÍSTICA (NUNCA DEIXA O USUÁRIO NA MÃO)
-    if (!replyText || replyText.trim().length < 20) {
-      if (isClinicalReportRequest) {
-        replyText = generateDetailedClinicalReportFallback(targetPatient, message);
-      } else if (patients.length === 0 && (messageLower.includes("paciente") || messageLower.includes("prontuario") || messageLower.includes("dieta") || messageLower.includes("conduta"))) {
-        replyText = `Nenhum paciente cadastrado até o momento. Cadastre seu primeiro paciente no menu **"Pacientes & Prontuários"** para que eu possa auxiliar na elaboração de condutas e planos alimentares.`;
-      } else {
-        replyText = `Olá, Doutor(a)! Sou a **NUTRIA**, copiloto clínico do ecossistema NutrinK.\n\nRecebi sua solicitação: *"${message}"*.\n\n${targetPatient ? `**Paciente em Acompanhamento:** ${targetPatient.name} (${targetPatient.age} anos, ${targetPatient.currentWeightKg} kg, Objetivo: ${targetPatient.objective})\n- **TMB Estimada:** ${targetPatient.tmb || 1550} kcal | **GET Estimado:** ${targetPatient.get || 2100} kcal\n- **Peso:** Inicial ${targetPatient.initialWeightKg || targetPatient.currentWeightKg} kg ➔ Atual ${targetPatient.currentWeightKg} kg` : 'Todos os dados e parâmetros clínicos do consultório permanecem sincronizados.'}\n\nPosso calcular sua dieta, emitir o relatório antropométrico completo ou agendar consultas.`;
-      }
-      successfulProvider = "clinical_engine";
+    if (!replyText || replyText.trim().length === 0) {
+      replyText = "Solicitação processada com sucesso pelo copiloto NutrinK.";
     }
 
     res.json({
-      reply: replyText,
-      content: replyText,
+      reply: replyText.trim(),
+      content: replyText.trim(),
       actionExecuted,
-      provider: successfulProvider
+      model: usedModel,
+      provider: "gemini"
     });
 
   } catch (error: any) {

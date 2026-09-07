@@ -53,12 +53,7 @@ interface NutriaCopilotProps {
 const DEFAULT_WELCOME_MESSAGE: NutriaMessage = {
   id: 'msg-init-1',
   role: 'assistant',
-  content: `Olá, Doutor(a)! Eu sou a **NUTRIA**, copiloto clínico e cérebro operacional do ecossistema NutrinK.
-
-Como posso otimizar seu atendimento hoje? Você pode me solicitar:
-- **Clínica & Cálculos**: *"Calcule a TMB e GET de um paciente de 78kg e 180cm"*, *"Sugira distribuição de macronutrientes para hipertrofia"*, *"Interprete exames de ferritina e B12"*.
-- **Rotina & Gestão**: *"Cadastre um novo paciente"*, *"Agende consulta para amanhã"*, *"Lance uma receita de R$ 350 via PIX"*.
-- **Planos & Assinaturas**: *"Quais são os planos do NutrinK?"*`,
+  content: 'Olá, Doutor(a)! Como posso te apoiar agora?',
   timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 };
 
@@ -79,6 +74,11 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
   // Estado local gerenciado das mensagens da conversa
   const [messages, setMessages] = useState<NutriaMessage[]>(() => {
     if (initialMessages && initialMessages.length > 0) {
+      if (initialMessages[0]?.role === 'assistant' && typeof initialMessages[0]?.content === 'string' && initialMessages[0].content.includes('Eu sou a **NUTRIA**')) {
+        const copy = [...initialMessages];
+        copy[0] = { ...copy[0], content: 'Olá, Doutor(a)! Como posso te apoiar agora?' };
+        return copy;
+      }
       return initialMessages;
     }
     return [DEFAULT_WELCOME_MESSAGE];
@@ -97,7 +97,13 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
   // Sincroniza mensagens externas imediatamente com o estado local
   useEffect(() => {
     if (initialMessages) {
-      setMessages(initialMessages);
+      if (initialMessages.length > 0 && initialMessages[0]?.role === 'assistant' && typeof initialMessages[0]?.content === 'string' && initialMessages[0].content.includes('Eu sou a **NUTRIA**')) {
+        const copy = [...initialMessages];
+        copy[0] = { ...copy[0], content: 'Olá, Doutor(a)! Como posso te apoiar agora?' };
+        setMessages(copy);
+      } else {
+        setMessages(initialMessages);
+      }
     }
   }, [initialMessages]);
 
