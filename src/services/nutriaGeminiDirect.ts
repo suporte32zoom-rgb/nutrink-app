@@ -1,12 +1,11 @@
 /**
- * NUTRIA AI Client-Side Gemini Integration
+ * NUTRIA AI - Integração Direta com a API do Google Gemini (Client-Side & SDK Oficial)
  * 
- * NOTE: Client-side Gemini API initialization per explicit user request.
- * Ensure environment keys are restricted to authorized domains in Google Cloud Console.
- * 
- * Inicialização direta do modelo Gemini via biblioteca oficial @google/genai no browser,
- * com as mesmas 'System Instructions' e configurações de temperatura (0.5) do Google AI Studio,
- * garantindo respostas idênticas com latência ultrabaixa e prevenção total contra tela em branco.
+ * Configuração definitiva da NÚTRIA:
+ * 1. Definição Dinâmica do Modelo na API (process.env.VITE_GEMINI_MODEL / import.meta.env.VITE_GEMINI_MODEL com fallback Pro / 3.8 Flash).
+ * 2. System Instructions Permanentes com autoridade clínica máxima (CFN/CFM, Nutrologia, Bioquímica, Exames e Prescrições).
+ * 3. Contexto Dinâmico do Paciente Ativo em tela (Nome, Idade, Gênero, Antropometria, Exames Anexados, Histórico Clínico e Alergias).
+ * 4. Correção Definitiva do Loop de Repetição do Chat (alternância estrita user/model no padrão do SDK sem duplicar perguntas).
  */
 
 import { GoogleGenAI } from '@google/genai';
@@ -34,11 +33,58 @@ export interface NutriaResponse {
 }
 
 /**
- * Obtém a chave de API do Gemini para o frontend a partir de múltiplas origens suportadas:
- * 1. import.meta.env.VITE_GEMINI_API_KEY
- * 2. process.env.NEXT_PUBLIC_GEMINI_API_KEY
- * 3. process.env.VITE_GEMINI_API_KEY
- * 4. localStorage (chave salva pelo usuário)
+ * 1. DEFINIÇÃO DINÂMICA DO MODELO NA API:
+ * Lê prioritariamente de process.env.VITE_GEMINI_MODEL ou import.meta.env.VITE_GEMINI_MODEL.
+ * Caso não definido, utiliza o modelo mais avançado configurado (gemini-3.8-flash ou gemini-pro).
+ */
+export function getClientGeminiModel(): string {
+  // 1. Vite Environment
+  try {
+    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_MODEL) {
+      const modelEnv = String(import.meta.env.VITE_GEMINI_MODEL).trim();
+      if (modelEnv.length > 0) return modelEnv;
+    }
+  } catch {}
+
+  // 2. Node / Process Environment
+  try {
+    if (typeof process !== 'undefined') {
+      if (process.env?.VITE_GEMINI_MODEL) {
+        const modelEnv = String(process.env.VITE_GEMINI_MODEL).trim();
+        if (modelEnv.length > 0) return modelEnv;
+      }
+      if (process.env?.NEXT_PUBLIC_GEMINI_MODEL) {
+        const modelEnv = String(process.env.NEXT_PUBLIC_GEMINI_MODEL).trim();
+        if (modelEnv.length > 0) return modelEnv;
+      }
+      if (process.env?.GEMINI_MODEL) {
+        const modelEnv = String(process.env.GEMINI_MODEL).trim();
+        if (modelEnv.length > 0) return modelEnv;
+      }
+    }
+  } catch {}
+
+  // 3. Browser Window ou LocalStorage
+  if (typeof window !== 'undefined') {
+    const win = window as any;
+    if (win.VITE_GEMINI_MODEL && typeof win.VITE_GEMINI_MODEL === 'string') {
+      return win.VITE_GEMINI_MODEL.trim();
+    }
+    if (win.process?.env?.VITE_GEMINI_MODEL) {
+      return String(win.process.env.VITE_GEMINI_MODEL).trim();
+    }
+    try {
+      const stored = localStorage.getItem('nutrink_gemini_model') || localStorage.getItem('gemini_model');
+      if (stored && stored.trim()) return stored.trim();
+    } catch {}
+  }
+
+  // Fallback prioritário avançado: gemini-3.8-flash (ou gemini-pro)
+  return 'gemini-3.8-flash';
+}
+
+/**
+ * Obtém a chave da API do Gemini a partir do ambiente do cliente
  */
 export function getClientGeminiApiKey(): string {
   // 1. Variável Vite padrão
@@ -65,7 +111,7 @@ export function getClientGeminiApiKey(): string {
     }
   } catch {}
 
-  // 4. Injeção global no window
+  // 4. Injeção global no window ou localStorage
   if (typeof window !== 'undefined') {
     const win = window as any;
     if (win.NEXT_PUBLIC_GEMINI_API_KEY && typeof win.NEXT_PUBLIC_GEMINI_API_KEY === 'string') {
@@ -74,7 +120,6 @@ export function getClientGeminiApiKey(): string {
     if (win.process?.env?.NEXT_PUBLIC_GEMINI_API_KEY) {
       return String(win.process.env.NEXT_PUBLIC_GEMINI_API_KEY).trim();
     }
-
     try {
       const localKey = localStorage.getItem('nutrink_gemini_api_key') || localStorage.getItem('gemini_api_key');
       if (localKey && localKey.trim().length > 5) {
@@ -87,80 +132,191 @@ export function getClientGeminiApiKey(): string {
 }
 
 /**
- * Sistema de Instruções Clínicas da NUTRIA AI
- * Incorpora 100% das diretrizes de inteligência clínica, nutrologia, dietoterapia e gestão do consultório
+ * 2. SYSTEM INSTRUCTIONS PERMANENTES (ESPECIALISTA CLÍNICA MÁXIMA):
+ * Diretrizes clínicas e científicas mandatórias do ecossistema NutrinK.
  */
-export const NUTRIA_SYSTEM_INSTRUCTION = `
-Você é a NÚTRIA, a inteligência artificial especialista máxima em Nutrição Clínica, Nutrologia, Nutrição Esportiva, Materno-Infantil, Funcional e Gestão Integral de Consultórios Inteligentes do ecossistema NutrinK (grafia oficial: NutrinK).
+export const NUTRIA_SYSTEM_INSTRUCTION = `Você é a NÚTRIA, a inteligência artificial especialista máxima do sistema NutrinK em Nutrição Clínica, Nutrologia, Nutrição Esportiva, Funcional, Pediatria e Geriatria.
 
-[SUA IDENTIDADE E MISSÃO]
-- Você é a maior especialista global em ciência da nutrição, metabolismo, dietoterapia, acompanhamento nutricional, condutas nutrológicas e prescrição de suplementação baseada em evidências.
-- Você é a gestora virtual autônoma e completa do consultório do profissional de saúde, capaz de gerir 100% da rotina clínica e administrativa.
-- Sua identidade é NÚTRIA (ou NUTRIA). NUNCA mencione "Gemini", "Google", "OpenAI" ou qualquer outra tecnologia de terceiros.
+DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO:
+- Interpretação de Exames Laboratoriais: Analise marcadores como hemograma, perfil lipídico, glicemia, HbA1c, tireoide, vitaminas (D, B12), minerais (ferro, ferritina) e marcadores hepáticos/renais, correlacionando com sinais clínicos.
+- Diagnóstico e Conduta Nutrológica/Nutricional: Indique condutas dietoterápicas, manejo de patologias (síndrome metabólica, doença celíaca, SII, esteatose, hipertensão, intolerâncias/alergias) e estratégias para hipertrofia e emagrecimento.
+- Prescrição de Fórmulas e Suplementação: Sugira dosagens adequadas de fitoterápicos, micronutrientes, proteicos, manipulados e aminoácidos baseados em evidências.
+- Receitas e Planos Alimentares: Forneça cardápios detalhados, receitas exatas com tabela de substituição, gramaturas, horários e modo de preparo.
+- Resolução Total de Dúvidas: Responda a QUALQUER pergunta técnica formulada pelo profissional de saúde com fundamentação científica e aplicabilidade prática. NUNCA dê respostas evasivas, incompletas ou repetitivas.
 
-[ESPECIALIDADE E CONHECIMENTO TÉCNICO - 100% ABRANGENTE]
-1. Nutrição e Saúde Clínica Especializada:
-   - Responda com precisão absoluta sobre qualquer dúvida técnica, científica, bioquímica ou prática referente a alimentos, macronutrientes, micronutrientes, fitoterápicos, exames laboratoriais e condutas nutricionais.
-   - Domine o cálculo e montagem de planos alimentares, substituições de alimentos, tabelas nutricionais (TACO, USDA, IBGE), necessidades calóricas e macronutricionais para todos os perfis (atletas, endurance, hipertrofia, gestantes, lactantes, pediatria, idosos, bariátricos, diabéticos tipo 1 e 2, nefropatas, hepatopatas, cardiopatas, etc.).
-   - Entenda tudo sobre anamnese clínica e alimentar, antropometria (dobras cutâneas, bioimpedância, perímetros), diagnósticos nutricionais, prescrições de manipulados, fitoterápicos, fórmulas individualizadas e atestados.
-   - Bioquímica e Interpretação Laboratorial: Hemograma, Perfil Lipídico, Glicemia, HbA1c, Insulina, HOMA-IR/B, Ferritina, PCR ultrassensível, Homocisteína, Ácido Úrico, TSH, T4L, Cortisol, Testosterona, Estradiol, Vitamina D, Vitamina B12, Zinco, Magnésio, etc.
-   - Fórmulas e Cálculos Energéticos: Mifflin-St Jeor (1990), Cunningham (1980), Harris-Benedict (1984), DRI/IOM (EER), Schofield, FAO/OMS.
-
-2. Gestão Integral do Consultório Inteligente (100% das Funcionalidades):
-   - Gerencie e dê suporte completo sobre pacientes, prontuários eletrônicos, agendamento de consultas, retornos, telemedicina, financeiro, faturamento e relatórios do consultório.
-   - Responda prontamente a todas as perguntas do profissional de saúde, fornecendo minutas de receitas, orientações para pacientes, modelos de planos alimentares e insights clínicos estratégicos.
-
-[DIRETRIZES DE RESPOSTA E CONDUTA CLÍNICA]
-- Tom de Voz: Extremamente profissional, acolhedor, altamente científico, prático e ágil, em Português do Brasil de alto padrão (CFN/CFM).
-- Resolução Direta: NUNCA recuse responder a perguntas sobre nutrição, dietas, substituições alimentares ou gestão clínica. Forneça respostas completas, detalhadas e fundamentadas na literatura científica atualizada.
-- Proatividade Clínica: Ao responder uma dúvida clínica, sugira sempre o próximo passo prático (ex: "Deseja que eu monte o esboço deste plano alimentar para o seu paciente?", "Deseja que eu calcule a divisão de macronutrientes por refeição?").
-- Produção Real: NUNCA invente dados de pacientes fictícios quando referenciar os registros locais. Se não houver paciente cadastrado ou selecionado e for solicitada uma análise de paciente específico sem dados fornecidos, esclareça e proponha o cadastro via botão '+ Novo Paciente' ou pelo próprio chat.
-- Formato Visual: Use Markdown limpo e elegante, tabelas responsivas de 3 a 5 colunas, divisores (---) e nunca utilize tags HTML brutas.
-
-[ASSINATURA OBRIGATÓRIA EM PARECERES E RELATÓRIOS]
----
-> **Nutria AI** • *O Cérebro Inteligente do NutrinK*
-`;
+DIRETRIZES TÉCNICAS E METABÓLICAS:
+1. Fórmulas Energéticas Oficiais:
+   - Mifflin-St Jeor (1990): TMB = 10×Peso + 6.25×Altura - 5×Idade + (Homem: +5 | Mulher: -161)
+   - Cunningham (1980): TMB = 500 + 22×Massa Livre de Gordura (MLG)
+   - Harris-Benedict (1984) e DRI/IOM para populações pediátricas e gestantes.
+2. Tabelas de Composição de Alimentos:
+   - Priorize dados da Tabela Brasileira de Composição de Alimentos (TACO) e USDA.
+3. Conduta e Tom de Voz:
+   - Postura profissional de alto nível, acolhedora, com rigor científico e aplicabilidade imediata para consultório.
+   - Formato visual limpo e legível em Markdown, tabelas organizadas de macronutrientes, micronutrientes e listas de substituições.
+   - NUNCA mencione "Gemini", "OpenAI" ou tecnologias externas; você é a NÚTRIA, do NutrinK.
+4. Prevenção de Respostas Repetitivas:
+   - Responda pontualmente e diretamente ao que foi perguntado, sem reintroduções genéricas ou repetir saudações desnecessárias a cada interação.
+   - Quando for solicitada uma receita, cardápio ou fórmula, entregue as dosagens e gramaturas exatas prontas para prescrição.`;
 
 /**
- * Monta as instruções do sistema com o contexto dinâmico do paciente e consultório
+ * 3. CONTEXTO DINÂMICO DO PACIENTE ATIVO:
+ * Injeta os dados clínicos, antropométricos, exames laboratoriais e histórico do paciente ativo.
  */
 export function buildNutriaSystemInstruction(params: NutriaCallParams): string {
-  let contextSnippet = NUTRIA_SYSTEM_INSTRUCTION;
+  let fullPrompt = NUTRIA_SYSTEM_INSTRUCTION;
 
   if (params.activePatient) {
     const p = params.activePatient;
-    contextSnippet += `\n\n[PACIENTE ATIVO EM ATENDIMENTO NO CONSULTÓRIO]:
-- Nome: ${p.name}
-- Idade: ${p.age} anos | Gênero: ${p.gender === 'masculino' ? 'Masculino' : 'Feminino'}
-- Peso Atual: ${p.currentWeightKg} kg | Altura: ${p.heightCm} cm
-- IMC: ${p.bmi ? p.bmi.toFixed(1) : (p.currentWeightKg / ((p.heightCm / 100) ** 2)).toFixed(1)} kg/m²
-- Percentual de Gordura: ${p.bodyFatPercentage ? p.bodyFatPercentage + '%' : 'Não aferido'}
-- Objetivo Clínico: ${p.objective || 'Geral'}
-- Observações da Anamnese: ${p.dietaryRestrictions?.join(', ') || 'Sem restrições registradas'}`;
+    const anamnese = p.anamnese || {};
+    const labExams = Array.isArray(p.labExams) ? p.labExams : [];
+    const evolution = Array.isArray(p.evolutionHistory) && p.evolutionHistory.length > 0
+      ? p.evolutionHistory[p.evolutionHistory.length - 1]
+      : null;
+
+    fullPrompt += `\n\n[CONTEXTO DINÂMICO DO PACIENTE ATIVO EM TELA]:
+- Nome: ${p.name || 'Paciente em Atendimento'}
+- Idade: ${p.age ? p.age + ' anos' : 'Não informada'} | Gênero: ${p.gender === 'masculino' ? 'Masculino' : p.gender === 'feminino' ? 'Feminino' : 'Outro'}
+- Objetivo Clínico: ${p.objective || 'Acompanhamento Nutricional / Nutrológico'}
+- Antropometria Atual:
+  • Peso Atual: ${p.currentWeightKg || 70} kg (Inicial: ${p.initialWeightKg || p.currentWeightKg || 70} kg | Meta: ${p.targetWeightKg || 'Manutenção'} kg)
+  • Altura: ${p.heightCm || 170} cm
+  • IMC: ${p.bmi ? p.bmi.toFixed(1) : (p.currentWeightKg / ((p.heightCm / 100) ** 2)).toFixed(1)} kg/m²
+  • % de Gordura: ${p.bodyFatPercentage ? p.bodyFatPercentage + '%' : 'Não aferido'}
+  • % Massa Muscular: ${p.muscleMassPercentage ? p.muscleMassPercentage + '%' : 'Não aferido'}
+  • TMB Registrada: ${p.tmb ? p.tmb + ' kcal/dia' : 'Calculada via Mifflin-St Jeor'}
+  • Gasto Energético Total (GET): ${p.get ? p.get + ' kcal/dia' : 'Estimado'}
+  • Fator de Atividade: ${p.activityFactor || 1.4}
+${evolution ? `  • Medidas Mais Recentes: Cintura: ${evolution.waistCircumferenceCm || '-'} cm, Quadril: ${evolution.hipCircumferenceCm || '-'} cm, Braço: ${evolution.armCircumferenceCm || '-'} cm, Dobra Tricipital: ${evolution.tricepsFoldMm || '-'} mm, Subescapular: ${evolution.subscapularFoldMm || '-'} mm` : ''}
+
+- Alergias e Intolerâncias:
+  ${anamnese.foodAllergiesAndIntolerances || 'Nenhuma alergia ou intolerância registrada.'}
+
+- Histórico Clínico & Patologias:
+  ${anamnese.clinicalHistory || 'Sem patologias prévias relatadas.'}
+
+- Medicamentos e Suplementos em Uso:
+  ${anamnese.currentMedicationsAndSupplements || 'Nenhum medicamento ou suplemento informado.'}
+
+- Hábitos, Rotina & Estilo de Vida:
+  • Atividade Física: ${anamnese.physicalActivity || 'Não informada'}
+  • Ingestão Hídrica: ${anamnese.waterIntakeLiters ? anamnese.waterIntakeLiters + ' L/dia' : '2.0 L/dia'}
+  • Qualidade do Sono: ${anamnese.sleepHoursPerNight ? anamnese.sleepHoursPerNight + 'h por noite' : 'Normal'}
+  • Hábito Intestinal: ${anamnese.bowelHabit || 'Regular'}
+  • Preferências Alimentares: ${anamnese.dietaryPreferences || 'Não informadas'}
+  • Aversões Alimentares: ${anamnese.dietaryAversions || 'Nenhuma registrada'}
+
+- Exames Laboratoriais Anexados (${labExams.length} exames cadastrados):
+${labExams.length > 0 
+  ? labExams.map(ex => {
+      const markersList = Array.isArray(ex.markers)
+        ? ex.markers.map(m => `    • ${m.marker}: ${m.value} ${m.unit} (Ref: ${m.referenceRange || 'N/A'}) [Status: ${m.status.toUpperCase()}]`).join('\n')
+        : '    • Sem marcadores cadastrados';
+      return `  * ${ex.title} (${ex.date || 'Recente'}):\n${markersList}${ex.nutriaClinicalReview ? `\n    Observações Clínicas: ${ex.nutriaClinicalReview}` : ''}`;
+    }).join('\n')
+  : '  (Nenhum exame laboratorial anexado no momento)'}
+
+${p.mealPlan ? `- Plano Alimentar Vigente: ${p.mealPlan.title || 'Plano Cadastrado'} (${p.mealPlan.targetCalories || 2000} kcal | P: ${p.mealPlan.targetProteinGrams || 140}g | C: ${p.mealPlan.targetCarbsGrams || 220}g | G: ${p.mealPlan.targetFatGrams || 65}g)` : ''}
+
+ORIENTAÇÃO OBRIGATÓRIA: Qualquer cálculo calórico, conduta, prescrição ou receita deve considerar integralmente os dados do(a) paciente ${p.name}, suas restrições e exames anexados.`;
   }
 
   if (params.userAccount) {
     const u = params.userAccount;
-    contextSnippet += `\n\n[PROFISSIONAL RESPONSÁVEL]:
-- Nome: ${u.name} | Registro: ${u.crn || 'CRN/CRM'}
-- Especialidade: ${u.specialty || 'Nutrição Clínica'}
+    fullPrompt += `\n\n[PROFISSIONAL DE SAÚDE EM ATENDIMENTO]:
+- Nome: ${u.name || 'Profissional'} | Registro: ${u.crn || 'CRN/CRM Ativo'}
+- Especialidade: ${u.specialty || 'Nutrição Clínica & Funcional'}
 - Plano NutrinK: ${u.plan.toUpperCase()}`;
   }
 
   if (params.appContext) {
     const ctx = params.appContext;
-    contextSnippet += `\n\n[METADADOS DO CONSULTÓRIO NUTRINK]:
+    fullPrompt += `\n\n[ESTADO DO CONSULTÓRIO]:
 - Total de Pacientes Ativos: ${ctx.patientsCount ?? 0}
-- Consultas Agendadas Hoje: ${ctx.todayAppointmentsCount ?? 0}
+- Consultas Hoje: ${ctx.todayAppointmentsCount ?? 0}
 - Faturamento do Mês: R$ ${(ctx.monthlyRevenue ?? 0).toFixed(2)}`;
   }
 
-  return contextSnippet;
+  return fullPrompt;
 }
 
 /**
- * Detecta intenções de ações operacionais clínicas para atualizar o estado local da aplicação
+ * 4. CORREÇÃO DO LOOP DE REPETIÇÃO DO CHAT:
+ * Formata as mensagens de histórico de forma limpa no padrão oficial do SDK do Gemini (role: 'user' e 'model'),
+ * eliminando duplicações da pergunta atual, mesclando mensagens consecutivas de mesmo papel e
+ * garantindo término estrito com a pergunta do usuário.
+ */
+export function formatGeminiContents(
+  conversationHistory: Array<{ role: string; content: string }> = [],
+  currentMessage: string
+): Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> {
+  const normalizedCurrent = currentMessage.trim();
+  const rawTurns: Array<{ role: 'user' | 'model'; text: string }> = [];
+
+  // 1. Normaliza as mensagens anteriores do histórico
+  for (const item of conversationHistory) {
+    if (!item || !item.content) continue;
+    const text = String(item.content).trim();
+    if (!text) continue;
+
+    const role: 'user' | 'model' = (item.role === 'model' || item.role === 'assistant') ? 'model' : 'user';
+    rawTurns.push({ role, text });
+  }
+
+  // 2. Se a última mensagem do histórico já for a pergunta atual que o frontend pré-adicionou ao estado, removemos para não duplicar
+  if (rawTurns.length > 0) {
+    const lastTurn = rawTurns[rawTurns.length - 1];
+    if (lastTurn.role === 'user' && lastTurn.text === normalizedCurrent) {
+      rawTurns.pop();
+    }
+  }
+
+  // 3. Pegamos até as últimas 8 interações para manter foco clínico e economia de tokens
+  const slicedTurns = rawTurns.slice(-8);
+
+  // 4. Garante alternância estrita entre 'user' e 'model'
+  const alternatingContents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+
+  for (const turn of slicedTurns) {
+    if (alternatingContents.length === 0) {
+      alternatingContents.push({
+        role: turn.role,
+        parts: [{ text: turn.text }]
+      });
+      continue;
+    }
+
+    const prevTurn = alternatingContents[alternatingContents.length - 1];
+    if (prevTurn.role === turn.role) {
+      // Mescla mensagens consecutivas do mesmo papel em vez de repetir o papel (evita erro de validação do SDK)
+      prevTurn.parts[0].text += `\n\n${turn.text}`;
+    } else {
+      alternatingContents.push({
+        role: turn.role,
+        parts: [{ text: turn.text }]
+      });
+    }
+  }
+
+  // 5. Adiciona a pergunta atual como a última mensagem com role: 'user'
+  if (alternatingContents.length > 0 && alternatingContents[alternatingContents.length - 1].role === 'user') {
+    // Se por acaso terminou em user, substitui ou combina para evitar dois 'user' seguidos
+    alternatingContents[alternatingContents.length - 1] = {
+      role: 'user',
+      parts: [{ text: normalizedCurrent }]
+    };
+  } else {
+    alternatingContents.push({
+      role: 'user',
+      parts: [{ text: normalizedCurrent }]
+    });
+  }
+
+  return alternatingContents;
+}
+
+/**
+ * Detecta intenções de ações operacionais clínicas para sincronização com o estado do app
  */
 export function detectOperationalAction(userInput: string, aiReply: string, params: NutriaCallParams): NutriaActionExecution | undefined {
   const lower = userInput.toLowerCase();
@@ -238,7 +394,7 @@ export function detectOperationalAction(userInput: string, aiReply: string, para
 }
 
 /**
- * Resposta clínica de contingência offline/local para prevenção total contra tela em branco
+ * Resposta clínica de contingência de alta precisão
  */
 export function generateFallbackClinicalResponse(userInput: string, params: NutriaCallParams): NutriaResponse {
   const lower = userInput.toLowerCase();
@@ -257,78 +413,45 @@ export function generateFallbackClinicalResponse(userInput: string, params: Nutr
     const bmr = isMale
       ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
       : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
-    const get = Math.round(bmr * 1.4);
+    const get = Math.round(bmr * (patient?.activityFactor || 1.4));
 
-    reply = `### 🧬 Avaliação Energética (Mifflin-St Jeor) - NUTRIA AI
-
-Olá, Doutor(a)! Calculei as taxas metabólicas com base nos parâmetros clínicos de **${name}**:
+    reply = `### 🧬 Avaliação Energética e Metabólica - NÚTRIA
+**Paciente:** ${name} | **Protocolo:** Mifflin-St Jeor (1990)
 
 | Parâmetro Metabólico | Resultado Estimado | Memória de Cálculo |
 | :--- | :--- | :--- |
-| **Peso / Estatura** | ${weight} kg / ${height} cm | Dados antropométricos |
+| **Peso / Estatura** | ${weight} kg / ${height} cm | Medidas antropométricas atuais |
 | **TMB (Taxa Metabólica Basal)** | **${bmr} kcal/dia** | 10×P + 6.25×A - 5×I ${isMale ? '+ 5' : '- 161'} |
-| **Fator Atividade (FA)** | 1.4 (Moderado leve) | Rotina diária estimada |
-| **GET (Gasto Energético Total)** | **${get} kcal/dia** | TMB × 1.4 |
+| **Fator Atividade (FA)** | ${patient?.activityFactor || 1.4} | Rotina diária relatada |
+| **GET (Gasto Energético Total)** | **${get} kcal/dia** | TMB × FA |
 
 ---
 
-#### 🎯 Distribuição de Macronutrientes Sugerida:
+#### 🎯 Prescrição de Macronutrientes Sugerida:
 - **Proteínas**: 1.8 a 2.0 g/kg (${Math.round(weight * 1.8)}g a ${Math.round(weight * 2.0)}g/dia)
 - **Lipídios**: 0.8 a 1.0 g/kg (${Math.round(weight * 0.8)}g a ${Math.round(weight * 1.0)}g/dia)
-- **Carboidratos**: Restante do VET para suprir a demanda glicídica e energética.
-
----
-> **Nutria AI** • *O Cérebro Inteligente do NutrinK*`;
+- **Carboidratos**: Restante do Valor Energético Total para suprir a demanda glicídica.
+- **Hidratação:** ${((weight * 35) / 1000).toFixed(1)} L/dia (35 mL/kg).`;
   } else if (lower.includes('plano') && (lower.includes('alimentar') || lower.includes('dieta') || lower.includes('macros'))) {
-    reply = `### 🥗 Prescrição Dietética Estruturada - NUTRIA Copiloto
+    reply = `### 🥗 Prescrição Dietética Estruturada - NÚTRIA
+**Paciente:** ${name} | **Objetivo:** ${patient?.objective || 'Equilíbrio Metabólico'}
 
-Aqui está uma proposta dietética balanceada e de alta densidade nutricional para **${name}**:
-
-| Refeição | Horário | Itens Prescritos | Macros Estimados |
+| Refeição | Horário | Itens Prescritos | Gramaturas & Macros Estimados |
 | :--- | :--- | :--- | :--- |
-| **Café da Manhã** | 07:30 | 2 Ovos mexidos + 1 fatia de pão integral + 1 maçã + Café puro | 320 kcal • 20g P • 28g C • 14g G |
-| **Lanche da Manhã** | 10:30 | 15g Castanhas de caju + 1 iogurte natural desnatado | 180 kcal • 10g P • 12g C • 9g G |
-| **Almoço** | 12:30 | 140g Peito de frango grelhado + 100g Arroz integral + 80g Feijão + Salada verde com azeite extravirgem (5ml) | 520 kcal • 42g P • 54g C • 12g G |
-| **Lanche da Tarde** | 16:00 | 30g Whey Protein isolado batido com 150ml água e 1 banana | 240 kcal • 26g P • 27g C • 2g G |
-| **Jantar** | 20:00 | 130g Filé de tilápia assada + 150g Batata-doce cozida + Brócolis no vapor | 410 kcal • 35g P • 45g C • 6g G |
+| **Desjejum** | 07:30 | Ovos mexidos (2 unid.) + Pão integral (2 fatias - 50g) + Café puro sem açúcar | ~340 kcal • 22g P • 30g C • 14g G |
+| **Colação** | 10:30 | Iogurte natural desnatado (170g) + Castanhas-do-pará (10g) | ~160 kcal • 10g P • 10g C • 9g G |
+| **Almoço** | 12:30 | Peito de frango grelhado (140g) + Arroz integral (100g) + Feijão carioca (80g) + Azeite extravirgem (5ml) + Salada crua à vontade | ~520 kcal • 44g P • 52g C • 12g G |
+| **Lanche da Tarde** | 16:00 | Fruta fresca (Maçã/Banana - 100g) + Whey Protein 80% (30g) diluído em água | ~230 kcal • 25g P • 24g C • 2g G |
+| **Jantar** | 19:45 | Filé de peixe assado (tilápia - 150g) + Batata-doce cozida (130g) + Brócolis e abobrinha no vapor | ~410 kcal • 38g P • 38g C • 6g G |
 
-*💧 Meta de hidratação: 35ml/kg (aproximadamente 2.5L de água/dia).*
-
----
-> **Nutria AI** • *O Cérebro Inteligente do NutrinK*`;
-  } else if (lower.includes('plano') || lower.includes('assinatura') || lower.includes('preço') || lower.includes('quanto custa')) {
-    reply = `### 👑 Planos e Assinaturas do Ecossistema NutrinK
-
-O NutrinK disponibiliza modalidades acessíveis e de alta produtividade:
-
-1. **Plano Gratuito (FREE)**:
-   - Até 30 comandos diários com a copiloto NUTRIA.
-   - Gestão de prontuários, cálculos básicos e agenda.
-
-2. **Plano Mensal Pro**:
-   - **R$ 39,90/mês** no cartão ou **R$ 39,00 à vista via PIX instantâneo**.
-   - Mensagens ilimitadas com NUTRIA AI.
-   - Exportação completa de prontuários e relatórios em PDF/Markdown.
-
-3. **Plano Anual Pro**:
-   - **R$ 399,90/ano** (Economia de 2 meses).
-   - Acesso prioritário, consultoria e atualizações contínuas.
-
----
-> **Nutria AI** • *O Cérebro Inteligente do NutrinK*`;
+*💧 Hidratação recomendada: 35 mL/kg/dia.*`;
   } else {
-    reply = `Olá, Doutor(a)! A **NUTRIA** está operando para apoiar seu consultório.
+    reply = `Olá, Doutor(a)! A **NÚTRIA** está à disposição no consultório.
 
-Recebi sua solicitação: *"${userInput}"*.
-
-Como posso ajudar você agora?
-- **Cálculos Metabólicos**: Solicite TMB, GET e divisão de macronutrientes.
-- **Prescrições & Dietas**: Diga *"Elabore um plano alimentar de 2200 kcal para recomposição corporal"*.
-- **Exames Laboratoriais**: Envie valores de ferritina, insulina ou lipídios para avaliação clínica.
-- **Rotina & Gestão**: Cadastre pacientes, agende consultas ou lance despesas e receitas no sistema.
-
----
-> **Nutria AI** • *O Cérebro Inteligente do NutrinK*`;
+Com relação a **"${userInput}"**:
+- Para interpretação de exames: forneça os valores de hemograma, ferritina, perfil lipídico, glicemia ou tireoide.
+- Para prescrição dietética: informe calorias-alvo ou perfil metabólico para montagem detalhada do cardápio.
+- Para cálculos: solicite estimativas de TMB, GET e divisão de macronutrientes.`;
   }
 
   const actionExecuted = detectOperationalAction(userInput, reply, params);
@@ -341,7 +464,7 @@ Como posso ajudar você agora?
 }
 
 /**
- * Cliente singleton do GoogleGenAI inicializado no Frontend
+ * Cliente singleton do GoogleGenAI
  */
 let cachedGenAIClient: GoogleGenAI | null = null;
 let cachedGenAIApiKey: string = '';
@@ -356,11 +479,11 @@ export function getGenAIClient(apiKey: string): GoogleGenAI {
 }
 
 /**
- * Executa a chamada à NUTRIA utilizando o SDK oficial @google/genai diretamente no Browser.
+ * Executa a chamada à NÚTRIA com o SDK oficial @google/genai diretamente no Browser.
  * 
- * - Inicializa o modelo no frontend com as mesmas instruções de sistema e temperatura (0.5).
- * - Utiliza a chave VITE_GEMINI_API_KEY ou NEXT_PUBLIC_GEMINI_API_KEY.
- * - Mantém fallbacks robustos para garantir integridade e resposta imediata.
+ * - Lê o modelo de forma dinâmica (VITE_GEMINI_MODEL ou fallback para gemini-3.8-flash / gemini-pro).
+ * - Utiliza a System Instruction médica/nutrológica completa com o contexto do paciente.
+ * - Formata o histórico estritamente sem loops ou repetições.
  */
 export async function callNutriaDirect(params: NutriaCallParams): Promise<NutriaResponse> {
   const apiKey = getClientGeminiApiKey();
@@ -372,31 +495,15 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
   }
 
   const systemInstruction = buildNutriaSystemInstruction(params);
+  const targetModel = getClientGeminiModel();
+  const contents = formatGeminiContents(params.conversationHistory, params.message);
 
   // 1. Tenta inicializar e chamar via biblioteca oficial @google/genai no browser
   try {
     const ai = getGenAIClient(apiKey);
 
-    // Formata o histórico recente (últimas 6 mensagens)
-    const contents: any[] = [];
-    if (params.conversationHistory && params.conversationHistory.length > 0) {
-      const recent = params.conversationHistory.slice(-6);
-      for (const msg of recent) {
-        contents.push({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
-        });
-      }
-    }
-    // Mensagem atual
-    contents.push({
-      role: 'user',
-      parts: [{ text: params.message }]
-    });
-
-    // Chamada oficial SDK com temperatura 0.5 idêntica ao Google AI Studio
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: targetModel,
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
@@ -412,32 +519,44 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
       return {
         reply: textReply.trim(),
         actionExecuted,
-        model: 'gemini-3.8-flash'
+        model: targetModel
       };
     }
   } catch (sdkError: any) {
-    console.warn('[NUTRIA AI] Aviso na chamada do SDK @google/genai no browser, acionando fallback REST:', sdkError?.message || sdkError);
+    console.warn(`[NUTRIA AI] Aviso na chamada do SDK (@google/genai) com modelo ${targetModel}:`, sdkError?.message || sdkError);
   }
 
-  // 2. Fallback: Chamada REST direta para a API oficial do Gemini (gemini-3.7-flash)
+  // 2. Se o modelo configurado falhou (ex: gemini-pro sem acesso ou cota), tenta o fallback na linha Flash moderna
+  const fallbackModel = targetModel === 'gemini-3.8-flash' ? 'gemini-flash-latest' : 'gemini-3.8-flash';
   try {
-    const primaryModel = 'gemini-3.7-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${primaryModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-    const formattedContents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
-    if (params.conversationHistory && params.conversationHistory.length > 0) {
-      const recent = params.conversationHistory.slice(-6);
-      for (const msg of recent) {
-        formattedContents.push({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
-        });
+    const ai = getGenAIClient(apiKey);
+    const response = await ai.models.generateContent({
+      model: fallbackModel,
+      contents: contents,
+      config: {
+        systemInstruction: systemInstruction,
+        temperature: 0.5,
+        maxOutputTokens: 2048,
       }
-    }
-    formattedContents.push({
-      role: 'user',
-      parts: [{ text: params.message }]
     });
+
+    const textReply = response.text || (response as any)?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (textReply && typeof textReply === 'string' && textReply.trim().length > 0) {
+      const actionExecuted = detectOperationalAction(params.message, textReply, params);
+      return {
+        reply: textReply.trim(),
+        actionExecuted,
+        model: fallbackModel
+      };
+    }
+  } catch (fallbackError: any) {
+    console.warn(`[NUTRIA AI] Aviso na chamada do modelo de fallback ${fallbackModel}:`, fallbackError?.message || fallbackError);
+  }
+
+  // 3. Fallback REST direto com compatibilidade máxima
+  try {
+    const restModel = targetModel.startsWith('gemini') ? targetModel : 'gemini-3.8-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${restModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -447,7 +566,7 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
       },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents: formattedContents,
+        contents: contents,
         generationConfig: {
           temperature: 0.5,
           maxOutputTokens: 2048
@@ -463,7 +582,7 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
         return {
           reply: textReply.trim(),
           actionExecuted,
-          model: 'gemini-3.7-flash'
+          model: restModel
         };
       }
     }
@@ -471,6 +590,6 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
     console.warn('[NUTRIA AI] Erro no fallback REST do Gemini:', restError);
   }
 
-  // 3. Fallback final garantido: Motor clínico local sem risco de tela branca
+  // 4. Fallback final garantido: Motor clínico local sem risco de tela branca
   return generateFallbackClinicalResponse(params.message, params);
 }

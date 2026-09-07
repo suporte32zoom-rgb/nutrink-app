@@ -270,12 +270,12 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
     try {
       const patientData = activePatient || patientContext || null;
 
-      // 2. Chamada REST direta para a API oficial do Gemini 3.7 Flash
+      // Chamada direta para a API oficial do Gemini com modelo dinâmico
       const result = await callNutriaDirect({
         message: input,
         activePatient: patientData,
         userAccount: userAccount,
-        conversationHistory: [...messages, userMsg].slice(-6).map(m => ({
+        conversationHistory: messages.slice(-8).map(m => ({
           role: m.role,
           content: m.content
         }))
