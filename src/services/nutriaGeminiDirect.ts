@@ -15,7 +15,10 @@ export interface NutriaCallParams {
   message: string;
   conversationHistory?: Array<{ role: string; content: string }>;
   activePatient?: Patient | null;
+  patientContext?: any;
   patients?: Patient[];
+  appointments?: any[];
+  transactions?: any[];
   userAccount?: UserAccount;
   appContext?: {
     patientsCount?: number;
@@ -79,8 +82,8 @@ export function getClientGeminiModel(): string {
     } catch {}
   }
 
-  // Fallback prioritário avançado: gemini-3.8-flash (ou gemini-pro)
-  return 'gemini-3.8-flash';
+  // Fallback prioritário estável e rápido: gemini-3.1-flash-lite
+  return 'gemini-3.1-flash-lite';
 }
 
 /**
@@ -396,229 +399,98 @@ export function detectOperationalAction(userInput: string, aiReply: string, para
 }
 
 /**
- * Resposta clínica de contingência de alta precisão
- */
-export function generateFallbackClinicalResponse(userInput: string, params: NutriaCallParams): NutriaResponse {
-  const lower = userInput.toLowerCase();
-  const patient = params.activePatient;
-  const name = patient?.name || 'paciente';
-
-  let reply = '';
-
-  if (lower.includes('tmb') || lower.includes('get') || lower.includes('calcule') || lower.includes('calorias')) {
-    const weight = patient?.currentWeightKg || 70;
-    const height = patient?.heightCm || 170;
-    const age = patient?.age || 30;
-    const isMale = patient ? patient.gender === 'masculino' : true;
-
-    // Mifflin-St Jeor (1990)
-    const bmr = isMale
-      ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
-      : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
-    const get = Math.round(bmr * (patient?.activityFactor || 1.4));
-
-    reply = `### 🧬 Avaliação Energética e Metabólica - NÚTRIA
-**Paciente:** ${name} | **Protocolo:** Mifflin-St Jeor (1990)
-
-| Parâmetro Metabólico | Resultado Estimado | Memória de Cálculo |
-| :--- | :--- | :--- |
-| **Peso / Estatura** | ${weight} kg / ${height} cm | Medidas antropométricas atuais |
-| **TMB (Taxa Metabólica Basal)** | **${bmr} kcal/dia** | 10×P + 6.25×A - 5×I ${isMale ? '+ 5' : '- 161'} |
-| **Fator Atividade (FA)** | ${patient?.activityFactor || 1.4} | Rotina diária relatada |
-| **GET (Gasto Energético Total)** | **${get} kcal/dia** | TMB × FA |
-
----
-
-#### 🎯 Prescrição de Macronutrientes Sugerida:
-- **Proteínas**: 1.8 a 2.0 g/kg (${Math.round(weight * 1.8)}g a ${Math.round(weight * 2.0)}g/dia)
-- **Lipídios**: 0.8 a 1.0 g/kg (${Math.round(weight * 0.8)}g a ${Math.round(weight * 1.0)}g/dia)
-- **Carboidratos**: Restante do Valor Energético Total para suprir a demanda glicídica.
-- **Hidratação:** ${((weight * 35) / 1000).toFixed(1)} L/dia (35 mL/kg).`;
-  } else if (lower.includes('plano') && (lower.includes('alimentar') || lower.includes('dieta') || lower.includes('macros'))) {
-    reply = `### 🥗 Prescrição Dietética Estruturada - NÚTRIA
-**Paciente:** ${name} | **Objetivo:** ${patient?.objective || 'Equilíbrio Metabólico'}
-
-| Refeição | Horário | Itens Prescritos | Gramaturas & Macros Estimados |
-| :--- | :--- | :--- | :--- |
-| **Desjejum** | 07:30 | Ovos mexidos (2 unid.) + Pão integral (2 fatias - 50g) + Café puro sem açúcar | ~340 kcal • 22g P • 30g C • 14g G |
-| **Colação** | 10:30 | Iogurte natural desnatado (170g) + Castanhas-do-pará (10g) | ~160 kcal • 10g P • 10g C • 9g G |
-| **Almoço** | 12:30 | Peito de frango grelhado (140g) + Arroz integral (100g) + Feijão carioca (80g) + Azeite extravirgem (5ml) + Salada crua à vontade | ~520 kcal • 44g P • 52g C • 12g G |
-| **Lanche da Tarde** | 16:00 | Fruta fresca (Maçã/Banana - 100g) + Whey Protein 80% (30g) diluído em água | ~230 kcal • 25g P • 24g C • 2g G |
-| **Jantar** | 19:45 | Filé de peixe assado (tilápia - 150g) + Batata-doce cozida (130g) + Brócolis e abobrinha no vapor | ~410 kcal • 38g P • 38g C • 6g G |
-
-*💧 Hidratação recomendada: 35 mL/kg/dia.*`;
-  } else {
-    reply = `Olá, Doutor(a)! A **NÚTRIA** está à disposição no consultório.
-
-Com relação a **"${userInput}"**:
-- Para interpretação de exames: forneça os valores de hemograma, ferritina, perfil lipídico, glicemia ou tireoide.
-- Para prescrição dietética: informe calorias-alvo ou perfil metabólico para montagem detalhada do cardápio.
-- Para cálculos: solicite estimativas de TMB, GET e divisão de macronutrientes.`;
-  }
-
-  const actionExecuted = detectOperationalAction(userInput, reply, params);
-
-  return {
-    reply,
-    actionExecuted,
-    model: 'nutria-clinical-engine'
-  };
-}
-
-/**
- * Cliente singleton do GoogleGenAI
- */
-let cachedGenAIClient: GoogleGenAI | null = null;
-let cachedGenAIApiKey: string = '';
-
-export function getGenAIClient(apiKey: string): GoogleGenAI {
-  if (cachedGenAIClient && cachedGenAIApiKey === apiKey) {
-    return cachedGenAIClient;
-  }
-  cachedGenAIClient = new GoogleGenAI({ apiKey });
-  cachedGenAIApiKey = apiKey;
-  return cachedGenAIClient;
-}
-
-/**
- * Executa a chamada à NÚTRIA com o SDK oficial @google/genai diretamente no Browser.
+ * Executa a chamada à NÚTRIA diretamente via Google Gemini.
  * 
- * - Lê o modelo de forma dinâmica (VITE_GEMINI_MODEL ou fallback para gemini-3.8-flash / gemini-pro).
- * - Utiliza a System Instruction médica/nutrológica completa com o contexto do paciente.
- * - Formata o histórico estritamente sem loops ou repetições.
+ * - Prioriza a rota backend segura /api/nutria com failover multi-modelo e injeção completa de dados do consultório e do paciente ativo.
+ * - Toda e qualquer mensagem digitada é processada dinamicamente pela IA.
+ * - Sem templates fictícios ou respostas estáticas prontas.
  */
 export async function callNutriaDirect(params: NutriaCallParams): Promise<NutriaResponse> {
-  const apiKey = getClientGeminiApiKey();
+  const payload = {
+    message: params.message,
+    conversationHistory: params.conversationHistory || [],
+    activePatient: params.activePatient || params.patientContext || null,
+    patientContext: params.activePatient || params.patientContext || null,
+    patients: params.patients || [],
+    patientsContext: params.patients || [],
+    appointments: params.appointments || [],
+    todayAppointments: params.appointments || [],
+    transactions: params.transactions || [],
+    userAccount: params.userAccount || null,
+    appContext: params.appContext || {},
+    appStateContext: params.appContext || {}
+  };
 
-  // Se não houver chave no frontend, tenta a rota segura do backend (/api/nutria) antes do fallback determinístico
-  if (!apiKey) {
-    try {
-      const resp = await fetch('/api/nutria', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: params.message,
-          conversationHistory: params.conversationHistory,
-          patientContext: params.activePatient,
-          patientsContext: params.patients,
-          userAccount: params.userAccount,
-          context: params.appContext
-        })
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data && data.reply && typeof data.reply === 'string' && data.reply.trim().length > 0) {
-          return {
-            reply: data.reply.trim(),
-            actionExecuted: data.actionExecuted,
-            model: data.model || 'gemini'
-          };
-        }
-      }
-    } catch (backendErr) {
-      console.warn('[NUTRIA AI] Tentativa via rota backend /api/nutria falhou:', backendErr);
-    }
-
-    console.warn('[NUTRIA AI] Chave Gemini não encontrada no cliente e backend indisponível. Utilizando motor clínico de contingência.');
-    return generateFallbackClinicalResponse(params.message, params);
-  }
-
-  const systemInstruction = buildNutriaSystemInstruction(params);
-  const targetModel = getClientGeminiModel();
-  const contents = formatGeminiContents(params.conversationHistory, params.message);
-
-  // 1. Tenta inicializar e chamar via biblioteca oficial @google/genai no browser
+  // 1. Tenta a rota backend segura /api/nutria
   try {
-    const ai = getGenAIClient(apiKey);
-
-    const response = await ai.models.generateContent({
-      model: targetModel,
-      contents: contents,
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.5,
-        maxOutputTokens: 2048,
-      }
-    });
-
-    const textReply = response.text || (response as any)?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (textReply && typeof textReply === 'string' && textReply.trim().length > 0) {
-      const actionExecuted = detectOperationalAction(params.message, textReply, params);
-      return {
-        reply: textReply.trim(),
-        actionExecuted,
-        model: targetModel
-      };
-    }
-  } catch (sdkError: any) {
-    console.warn(`[NUTRIA AI] Aviso na chamada do SDK (@google/genai) com modelo ${targetModel}:`, sdkError?.message || sdkError);
-  }
-
-  // 2. Se o modelo configurado falhou (ex: gemini-pro sem acesso ou cota), tenta o fallback na linha Flash moderna
-  const fallbackModel = targetModel === 'gemini-3.8-flash' ? 'gemini-flash-latest' : 'gemini-3.8-flash';
-  try {
-    const ai = getGenAIClient(apiKey);
-    const response = await ai.models.generateContent({
-      model: fallbackModel,
-      contents: contents,
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.5,
-        maxOutputTokens: 2048,
-      }
-    });
-
-    const textReply = response.text || (response as any)?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (textReply && typeof textReply === 'string' && textReply.trim().length > 0) {
-      const actionExecuted = detectOperationalAction(params.message, textReply, params);
-      return {
-        reply: textReply.trim(),
-        actionExecuted,
-        model: fallbackModel
-      };
-    }
-  } catch (fallbackError: any) {
-    console.warn(`[NUTRIA AI] Aviso na chamada do modelo de fallback ${fallbackModel}:`, fallbackError?.message || fallbackError);
-  }
-
-  // 3. Fallback REST direto com compatibilidade máxima
-  try {
-    const restModel = targetModel.startsWith('gemini') ? targetModel : 'gemini-3.8-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${restModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-    const response = await fetch(url, {
+    const resp = await fetch('/api/nutria', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents: contents,
-        generationConfig: {
-          temperature: 0.5,
-          maxOutputTokens: 2048
-        }
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      const textReply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (textReply && typeof textReply === 'string' && textReply.trim().length > 0) {
-        const actionExecuted = detectOperationalAction(params.message, textReply, params);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data.reply && typeof data.reply === 'string' && data.reply.trim().length > 0) {
         return {
-          reply: textReply.trim(),
-          actionExecuted,
-          model: restModel
+          reply: data.reply.trim(),
+          actionExecuted: data.actionExecuted,
+          model: data.model || 'gemini'
+        };
+      }
+    } else {
+      const errJson = await resp.json().catch(() => null);
+      if (errJson?.reply && typeof errJson.reply === 'string') {
+        return {
+          reply: errJson.reply,
+          actionExecuted: errJson.actionExecuted,
+          model: 'error'
         };
       }
     }
-  } catch (restError) {
-    console.warn('[NUTRIA AI] Erro no fallback REST do Gemini:', restError);
+  } catch (backendErr) {
+    console.warn('[NUTRIA AI] Rota backend /api/nutria falhou, tentando fallback cliente se configurado:', backendErr);
   }
 
-  // 4. Fallback final garantido: Motor clínico local sem risco de tela branca
-  return generateFallbackClinicalResponse(params.message, params);
+  // 2. Se backend falhou e há chave no cliente, tenta chamada direta via SDK @google/genai
+  const apiKey = getClientGeminiApiKey();
+  if (apiKey) {
+    const systemInstruction = buildNutriaSystemInstruction(params);
+    const candidateModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+    const contents = formatGeminiContents(params.conversationHistory, params.message);
+
+    for (const model of candidateModels) {
+      try {
+        const ai = getGenAIClient(apiKey);
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            temperature: 0.5,
+            maxOutputTokens: 2048,
+          }
+        });
+
+        const textReply = response.text || (response as any)?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textReply && typeof textReply === 'string' && textReply.trim().length > 0) {
+          const actionExecuted = detectOperationalAction(params.message, textReply, params);
+          return {
+            reply: textReply.trim(),
+            actionExecuted,
+            model
+          };
+        }
+      } catch (err) {
+        console.warn(`[NUTRIA AI] Falha com modelo ${model} no cliente:`, err);
+        continue;
+      }
+    }
+  }
+
+  // 3. Caso a chamada falhe, informa erro genuíno sem nunca devolver template fixo
+  return {
+    reply: "Desculpe, Doutor(a). Ocorreu uma instabilidade temporária na conexão com a inteligência artificial. Por favor, tente enviar sua mensagem novamente.",
+    model: 'error'
+  };
 }

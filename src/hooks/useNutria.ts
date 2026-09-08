@@ -5,6 +5,8 @@ import { Patient, UserAccount } from '../types';
 export interface UseNutriaOptions {
   activePatient?: Patient | null;
   patients?: Patient[];
+  appointments?: any[];
+  transactions?: any[];
   userAccount?: UserAccount;
   appContext?: {
     patientsCount?: number;
@@ -34,6 +36,8 @@ export function useNutria(options: UseNutriaOptions = {}) {
           conversationHistory,
           activePatient: options.activePatient,
           patients: options.patients,
+          appointments: options.appointments,
+          transactions: options.transactions,
           userAccount: options.userAccount,
           appContext: options.appContext
         });
@@ -48,7 +52,7 @@ export function useNutria(options: UseNutriaOptions = {}) {
         setIsLoading(false);
       }
     },
-    [options.activePatient, options.patients, options.userAccount, options.appContext]
+    [options.activePatient, options.patients, options.appointments, options.transactions, options.userAccount, options.appContext]
   );
 
   return {

@@ -362,10 +362,10 @@ app.get("/api/health", (req: Request, res: Response) => {
 // Multi-model candidate list prioritizing dynamic VITE_GEMINI_MODEL with automatic failover
 const GEMINI_MODELS = [
   ...(process.env.VITE_GEMINI_MODEL ? [process.env.VITE_GEMINI_MODEL.trim()] : []),
-  "gemini-3.8-flash",
   "gemini-3.1-flash-lite",
-  "gemini-3.1-pro-preview",
-  "gemini-flash-latest"
+  "gemini-3.8-flash",
+  "gemini-flash-latest",
+  "gemini-3.1-pro-preview"
 ];
 
 async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
@@ -403,7 +403,9 @@ app.post(["/api/nutria/chat", "/api/nutria"], async (req: Request, res: Response
       activePatientContext = null,
       patientContext = null,
       patients = [],
+      patientsContext = [],
       appointments = [],
+      todayAppointments = [],
       transactions = [],
       userAccount = null
     } = req.body;
@@ -413,15 +415,22 @@ app.post(["/api/nutria/chat", "/api/nutria"], async (req: Request, res: Response
       return;
     }
 
-    // Merge context objects
+    // Merge context objects and extract collections
     const mergedAppContext = { ...appStateContext, ...appContext };
+    const effectivePatients: any[] = (Array.isArray(patients) && patients.length > 0)
+      ? patients
+      : (Array.isArray(patientsContext) ? patientsContext : []);
+    const effectiveAppointments: any[] = (Array.isArray(appointments) && appointments.length > 0)
+      ? appointments
+      : (Array.isArray(todayAppointments) ? todayAppointments : []);
+    const effectiveTransactions: any[] = Array.isArray(transactions) ? transactions : [];
 
     // Find if the user is asking about a specific patient
     const messageLower = message.toLowerCase();
-    let targetPatient = activePatientContext || patientContext || null;
+    let targetPatient = activePatientContext || patientContext || req.body.activePatient || null;
 
-    if (Array.isArray(patients) && patients.length > 0) {
-      const found = patients.find((p: any) => 
+    if (effectivePatients.length > 0) {
+      const found = effectivePatients.find((p: any) => 
         p.name && messageLower.includes(p.name.toLowerCase())
       );
       if (found) {
@@ -447,22 +456,22 @@ app.post(["/api/nutria/chat", "/api/nutria"], async (req: Request, res: Response
     const professionalTitle = userAccount?.crn?.includes('CRM') ? 'Médico Nutrólogo' : (userAccount?.specialty?.toLowerCase().includes('nutrolog') ? 'Nutrólogo(a)' : 'Nutricionista Clínico(a)');
 
     // Context summary for clinic management
-    const totalPatientsCount = patients.length > 0 ? patients.length : (mergedAppContext.patientsCount || 0);
-    const todayAptsCount = appointments.length > 0 ? appointments.length : (mergedAppContext.todayAppointmentsCount || 0);
+    const totalPatientsCount = effectivePatients.length > 0 ? effectivePatients.length : (mergedAppContext.patientsCount || 0);
+    const todayAptsCount = effectiveAppointments.length > 0 ? effectiveAppointments.length : (mergedAppContext.todayAppointmentsCount || 0);
     const monthlyRev = mergedAppContext.monthlyRevenue ?? 0;
     const monthlyExp = mergedAppContext.monthlyExpenses ?? 0;
     const netBalance = monthlyRev - monthlyExp;
 
-    const appointmentsSummary = Array.isArray(appointments) && appointments.length > 0
-      ? appointments.slice(0, 10).map((a: any, i: number) => `  ${i + 1}. ${a.date} às ${a.time} - Paciente: ${a.patientName || a.patientId} (${a.modality || a.type || 'Presencial'}) [Status: ${a.status || 'Confirmada'}]${a.value ? ` R$ ${a.value}` : ''}`).join('\n')
+    const appointmentsSummary = effectiveAppointments.length > 0
+      ? effectiveAppointments.slice(0, 15).map((a: any, i: number) => `  ${i + 1}. ${a.date} às ${a.time} - Paciente: ${a.patientName || a.patientId} (${a.modality || a.type || 'Presencial'}) [Status: ${a.status || 'Confirmada'}]${a.value ? ` R$ ${a.value}` : ''}`).join('\n')
       : '  (Nenhuma consulta listada no momento)';
 
-    const transactionsSummary = Array.isArray(transactions) && transactions.length > 0
-      ? transactions.slice(0, 8).map((t: any, i: number) => `  ${i + 1}. [${t.type === 'receita' ? 'RECEITA' : 'DESPESA'}] R$ ${Number(t.amount).toFixed(2)} - ${t.description} (${t.paymentMethod || 'PIX'}) - Data: ${t.date}`).join('\n')
+    const transactionsSummary = effectiveTransactions.length > 0
+      ? effectiveTransactions.slice(0, 15).map((t: any, i: number) => `  ${i + 1}. [${t.type === 'receita' || t.type === 'income' ? 'RECEITA' : 'DESPESA'}] R$ ${Number(t.amount).toFixed(2)} - ${t.description} (${t.paymentMethod || 'PIX'}) - Data: ${t.date}`).join('\n')
       : '  (Nenhuma transação recente listada)';
 
-    const patientsListSummary = Array.isArray(patients) && patients.length > 0
-      ? patients.map((p: any, i: number) => `  ${i + 1}. ${p.name} (${p.age ? p.age + ' anos' : 'idade n/i'}, ${p.gender || 'n/i'}) - Peso: ${p.currentWeightKg || 'n/i'} kg - Objetivo: ${p.objective || 'Acompanhamento'}`).join('\n')
+    const patientsListSummary = effectivePatients.length > 0
+      ? effectivePatients.map((p: any, i: number) => `  ${i + 1}. ${p.name} (${p.age ? p.age + ' anos' : 'idade n/i'}, ${p.gender || 'n/i'}) - Peso: ${p.currentWeightKg || 'n/i'} kg - Objetivo: ${p.objective || 'Acompanhamento'}`).join('\n')
       : '  (Nenhum paciente cadastrado no momento)';
 
     // Prepare contextual prompt with full clinic and patient snapshot
@@ -617,7 +626,9 @@ ${targetPatient ? JSON.stringify({
             payload: { pageId: pageDoc.id, pageTitle: pageDoc.title },
             summary: `Documento aberto: ${pageDoc.title}`
           };
-          replyText = pageDoc.markdownContent;
+          if (!replyText) {
+            replyText = `Aberto documento institucional: **${pageDoc.title}**.`;
+          }
         } else if (call.name === "navegar_para_tela") {
           const secao = args.secao ? args.secao.toLowerCase() : "dashboard";
           let targetTab = "dashboard";
@@ -643,16 +654,8 @@ ${targetPatient ? JSON.stringify({
             summary: `Navegação realizada para ${screenTitle}.`
           };
 
-          if (targetTab === "dashboard") {
-            replyText = `### 📊 Visão Geral do Consultório NutrinK\n\n| Indicador Clínico & Operacional | Valor Atual | Meta / Status |\n| :--- | :--- | :--- |\n| **Pacientes Ativos** | ${patients.length || 5} | 🟢 Alta Adesão |\n| **Consultas Agendadas Hoje** | 4 atendimentos | ⏱️ Próximo às 14:30 |\n| **Faturamento Mensal** | R$ ${(mergedAppContext.monthlyRevenue || 18450).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | 📈 92% da Meta |\n| **Despesas Operacionais** | R$ ${(mergedAppContext.monthlyExpenses || 3200).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | 💼 Saldo Positivo |`;
-          } else if (targetTab === "patients") {
-            replyText = `### 👥 Prontuário Eletrônico & Gestão de Pacientes\n\n| Paciente | Idade | Objetivo | Peso Atual | % Gordura | Status |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n| **Lucas Silveira** | 30 anos | Hipertrofia & Força | 78.2 kg | 13.5% | 🟢 Ativo |\n| **Camila Rocha** | 33 anos | Emagrecimento Saudável | 71.4 kg | 28.2% | 🟢 Ativo |\n| **Juliana Mendonça** | 37 anos | Manejo de Diabetes | 81.2 kg | 36.4% | 🟢 Ativo |\n| **Gabriel Mendes** | 28 anos | Performance Esportiva | 73.5 kg | 11.2% | 🟢 Ativo |\n| **Beatriz Albuquerque** | 25 anos | Nutrição Vegetariana | 58.5 kg | 20.1% | 🟢 Ativo |`;
-          } else if (targetTab === "calendar") {
-            replyText = `### 📅 Grade de Horários & Próximos Atendimentos\n\n| Horário | Paciente | Tipo de Atendimento | Modalidade | Status |\n| :--- | :--- | :--- | :--- | :--- |\n| **14:30 - 15:20** | Lucas Silveira | Retorno & Bioimpedância | 🏢 Presencial | 🟢 Confirmada |\n| **16:00 - 16:50** | Camila Rocha | Retorno & Ajuste de Fibras | 🏢 Presencial | 🟢 Confirmada |\n| **10:00 (Amanhã)** | Juliana Mendonça | Ajuste de Plano Alimentar | 💻 Teleconsulta | 🟢 Confirmada |`;
-          } else if (targetTab === "finance") {
-            replyText = `### 💼 Fluxo de Caixa & Balanço Financeiro\n\n| Categoria Financeira | Mês Atual | Mês Anterior | Variação |\n| :--- | :--- | :--- | :--- |\n| **Entradas (Consultas & Planos)** | R$ ${(mergedAppContext.monthlyRevenue || 18450).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | R$ 16.200,00 | 🔼 +13.8% |\n| **Saídas (Despesas Operacionais)** | R$ ${(mergedAppContext.monthlyExpenses || 3200).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | R$ 3.450,00 | 🔽 -7.2% |\n| **Saldo Líquido** | **R$ ${((mergedAppContext.monthlyRevenue || 18450) - (mergedAppContext.monthlyExpenses || 3200)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}** | **R$ 12.750,00** | 📈 **+19.6%** |`;
-          } else if (targetTab === "nutricalc") {
-            replyText = `### 🧮 Central de Cálculos Energéticos & Protocolos Clínicos\n\n| Equação Preditiva | Indicação Clínica | Fórmula Base |\n| :--- | :--- | :--- |\n| **Mifflin-St Jeor (1990)** | Padrão ouro para adultos e sobrepeso | $10 \\times P + 6.25 \\times A - 5 \\times I + S$ |\n| **Cunningham (1980)** | Atletas e praticantes com %BF conhecido | $500 + 22 \\times \\text{Massa Livre de Gordura}$ |\n| **Harris-Benedict Revisada** | População geral e ambiente clínico | $88.362 + (13.397 \\times P) + (4.799 \\times A) - (5.677 \\times I)$ |`;
+          if (!replyText) {
+            replyText = `Navegando para a aba **${screenTitle}** do consultório NutrinK.`;
           }
         } else if (call.name === "cadastrar_paciente") {
           actionExecuted = {

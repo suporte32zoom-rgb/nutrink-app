@@ -369,11 +369,19 @@ Seu consultório foi inicializado com sucesso (${newUser.crn} • ${newUser.spec
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // Atualiza saudação antiga prolixa para a nova saudação curta
-            if (parsed[0]?.role === 'assistant' && typeof parsed[0]?.content === 'string' && parsed[0].content.includes('Eu sou a **NUTRIA**')) {
-              parsed[0].content = 'Olá, Doutor(a)! Como posso te apoiar agora?';
+            // Atualiza saudação antiga prolixa para a nova saudação curta e limpa fallbacks estáticos antigos
+            const sanitized = parsed.filter((m: any) => {
+              if (typeof m?.content === 'string' && m.content.includes('está à disposição no consultório')) {
+                return false;
+              }
+              return true;
+            });
+            if (sanitized.length > 0) {
+              if (sanitized[0]?.role === 'assistant' && typeof sanitized[0]?.content === 'string' && (sanitized[0].content.includes('Eu sou a **NUTRIA**') || sanitized[0].content.includes('está à disposição'))) {
+                sanitized[0].content = 'Olá, Doutor(a)! Como posso te apoiar agora?';
+              }
+              return sanitized;
             }
-            return parsed;
           }
         }
       } catch (err) {
