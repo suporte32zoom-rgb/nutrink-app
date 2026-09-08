@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
-import { callNutriaDirect, NutriaCallParams, NutriaResponse } from '../services/nutriaGeminiDirect';
-import { Patient, UserAccount } from '../types';
+import { callNutriaDirect, NutriaCallParams, NutriaResponse, getClientGeminiModel } from '../services/nutriaGeminiDirect';
+import { Patient, Appointment, FinancialTransaction, UserAccount, NutriaMessage } from '../types';
 
 export interface UseNutriaOptions {
   activePatient?: Patient | null;
+  patientContext?: Patient | null;
   patients?: Patient[];
-  appointments?: any[];
-  transactions?: any[];
+  appointments?: Appointment[];
+  transactions?: FinancialTransaction[];
   userAccount?: UserAccount;
   appContext?: {
     patientsCount?: number;
@@ -25,16 +26,23 @@ export function useNutria(options: UseNutriaOptions = {}) {
   const sendMessage = useCallback(
     async (
       message: string, 
-      conversationHistory: Array<{ role: string; content: string }> = []
+      conversationHistory: Array<{ role: string; content: string }> | NutriaMessage[] = []
     ): Promise<NutriaResponse> => {
       setIsLoading(true);
       setError(null);
 
+      // Normaliza histórico para objetos { role, content }
+      const formattedHistory = conversationHistory.map(item => ({
+        role: item.role,
+        content: item.content
+      }));
+
       try {
         const response = await callNutriaDirect({
           message,
-          conversationHistory,
-          activePatient: options.activePatient,
+          conversationHistory: formattedHistory,
+          activePatient: options.activePatient || options.patientContext,
+          patientContext: options.patientContext || options.activePatient,
           patients: options.patients,
           appointments: options.appointments,
           transactions: options.transactions,
@@ -52,13 +60,15 @@ export function useNutria(options: UseNutriaOptions = {}) {
         setIsLoading(false);
       }
     },
-    [options.activePatient, options.patients, options.appointments, options.transactions, options.userAccount, options.appContext]
+    [options.activePatient, options.patientContext, options.patients, options.appointments, options.transactions, options.userAccount, options.appContext]
   );
 
   return {
     sendMessage,
     isLoading,
     lastResponse,
-    error
+    error,
+    modelName: getClientGeminiModel()
   };
 }
+

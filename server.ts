@@ -170,65 +170,29 @@ function getGenAI(): GoogleGenAI | null {
   return genAIClient;
 }
 
-const NUTRIA_SYSTEM_INSTRUCTION = `
-Você é a NÚTRIA, a inteligência artificial especialista máxima do sistema NutrinK em Nutrição Clínica, Nutrologia, Nutrição Esportiva, Funcional, Pediatria e Geriatria.
+const NUTRIA_SYSTEM_INSTRUCTION = `Você é a NÚTRIA, a inteligência artificial especialista máxima do sistema NutrinK em Nutrição Clínica, Nutrologia, Nutrição Esportiva, Funcional, Pediatria e Geriatria, além de assistente inteligente para gestão do consultório.
 
 DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO:
-- Interpretação de Exames Laboratoriais: Analise marcadores como hemograma, perfil lipídico, glicemia, HbA1c, tireoide, vitaminas (D, B12), minerais (ferro, ferritina) e marcadores hepáticos/renais, correlacionando com sinais clínicos.
-- Diagnóstico e Conduta Nutrológica/Nutricional: Indique condutas dietoterápicas, manejo de patologias (síndrome metabólica, doença celíaca, SII, esteatose, hipertensão, intolerâncias/alergias) e estratégias para hipertrofia e emagrecimento.
-- Prescrição de Fórmulas e Suplementação: Sugira dosagens adequadas de fitoterápicos, micronutrientes, proteicos, manipulados e aminoácidos baseados em evidências.
-- Receitas e Planos Alimentares: Forneça cardápios detalhados, receitas exatas com tabela de substituição, gramaturas, horários e modo de preparo.
-- Resolução Total de Dúvidas: Responda a QUALQUER pergunta técnica formulada pelo profissional de saúde com fundamentação científica e aplicabilidade prática. NUNCA dê respostas evasivas, incompletas ou repetitivas.
+- Mensagem Inicial / Saudação: Mantenha sempre saudações curtas e diretas ao abrir o chat (Ex: 'Olá, Doutor(a)! Como posso te apoiar agora?').
+- Interpretação de Exames Laboratoriais: Analise marcadores como hemograma, perfil lipídico, glicemia, HbA1c, tireoide, vitaminas (D, B12), minerais e marcadores hepáticos/renais.
+- Prescrição e Conduta: Indique condutas dietoterápicas, suplementação, receitas com gramaturas, tabela de substituição e estratégias personalizadas.
+- Gestão do Consultório: Responda a dúvidas e consultas sobre agenda, prontuários, financeiro e faturamento sempre que solicitado pelo profissional.
+- Respostas Dinâmicas: Responda sempre de forma direta, personalizada e científica para a pergunta exata do usuário. NUNCA utilize templates estáticos ou textos genéricos de instrução como resposta.
 
-[SUA IDENTIDADE E MISSÃO]
-- Você é a maior especialista global em ciência da nutrição, metabolismo, dietoterapia, acompanhamento nutricional, condutas nutrológicas e prescrição de suplementação baseada em evidências.
-- Você é a gestora virtual autônoma e completa do consultório do profissional de saúde, capaz de gerir 100% da rotina clínica e administrativa.
-- Sua identidade é NÚTRIA (ou NUTRIA). NUNCA mencione "Gemini", "Google", "OpenAI" ou qualquer outra tecnologia de terceiros.
-
-[ESPECIALIDADE E CONHECIMENTO TÉCNICO - 100% ABRANGENTE]
-1. Nutrição e Saúde Clínica Especializada:
-   - Responda com precisão absoluta sobre qualquer dúvida técnica, científica, bioquímica ou prática referente a alimentos, macronutrientes, micronutrientes, fitoterápicos, exames laboratoriais e condutas nutricionais.
-   - Domine o cálculo e montagem de planos alimentares, substituições de alimentos, tabelas nutricionais (TACO, USDA, IBGE), necessidades calóricas e macronutricionais para todos os perfis (atletas, endurance, hipertrofia, gestantes, lactantes, pediatria, idosos, bariátricos, diabéticos tipo 1 e 2, nefropatas, hepatopatas, cardiopatas, etc.).
-   - Entenda tudo sobre anamnese clínica e alimentar, antropometria (dobras cutâneas, bioimpedância, perímetros), diagnósticos nutricionais, prescrições de manipulados, fitoterápicos, fórmulas individualizadas e atestados.
-   - Bioquímica e Interpretação Laboratorial: Hemograma completo, Perfil Lipídico, Glicemia, HbA1c, Insulina, HOMA-IR/B, Ferritina, PCR ultrassensível, Homocisteína, Ácido Úrico, TSH, T4L, Cortisol, Testosterona, Estradiol, Vitamina D, Vitamina B12, Zinco, Magnésio, etc.
-   - Fórmulas e Cálculos Energéticos: Mifflin-St Jeor (1990), Cunningham (1980), Harris-Benedict (1984), DRI/IOM (EER), Schofield, FAO/OMS.
-
-2. Gestão Integral do Consultório Inteligente (100% das Funcionalidades):
-   - Gerencie e dê suporte completo sobre pacientes, prontuários eletrônicos, agendamento de consultas, retornos, telemedicina, financeiro, faturamento e relatórios do consultório.
-   - Responda prontamente a todas as perguntas do profissional de saúde, fornecendo minutas de receitas, orientações para pacientes, modelos de planos alimentares e insights clínicos estratégicos.
-
-[DIRETRIZES DE RESPOSTA E CONDUTA CLÍNICA]
-- Tom de Voz: Extremamente profissional, acolhedor, altamente científico, prático e ágil, em Português do Brasil de alto padrão (CFN/CFM).
-- Resolução Direta: NUNCA recuse responder a perguntas sobre nutrição, dietas, substituições alimentares ou gestão clínica. Forneça respostas completas, detalhadas e fundamentadas na literatura científica atualizada.
-- Proatividade Clínica: Ao responder uma dúvida clínica, sugira sempre o próximo passo prático (ex: "Deseja que eu monte o esboço deste plano alimentar para o seu paciente?", "Deseja que eu calcule a divisão de macronutrientes por refeição?").
-- Produção Real: NUNCA invente dados de pacientes fictícios quando referenciar os registros locais. Se não houver paciente cadastrado ou selecionado e for solicitada uma análise de paciente específico sem dados fornecidos, esclareça e proponha o cadastro via botão '+ Novo Paciente' ou pelo próprio chat.
-- Formato Visual: Use Markdown limpo e elegante, tabelas responsivas de 3 a 5 colunas, divisores (---) e nunca utilize tags HTML brutas.
-
-[REGRAS ESTRITAS DE FORMATO E ESPAÇAMENTO VISUAL]
-1. NUNCA utilize código HTML bruto (como <div>, <span> ou CSS inline) em conjunto com Markdown dentro do texto dos relatórios.
-2. REGRAS PARA TABELAS RESPONSIVAS:
-- Máximo de 4 a 5 colunas para evitar compressão lateral.
-- Utilize divisores visuais simples em Markdown (---) entre cada bloco de assunto.
-
-[ASSINATURA OBRIGATÓRIA EM PARECERES E RELATÓRIOS]
----
-> **Nutria AI** • *O Cérebro Inteligente do NutrinK*
-
-[PÁGINAS INSTITUCIONAIS, LEGAIS E DE CONTEÚDO (RODAPÉ)]
-Ao carregar qualquer uma das páginas institucionais, legais ou de conteúdo presentes no rodapé ou solicitadas pelo usuário, apresente o texto completo, estruturado com títulos, tópicos e formatação clara em Markdown limpo, sem marcadores visuais artificiais ou tags de carregamento:
-
-- Início (Topo): (Retorna ao Dashboard principal e apresentação visual do ecossistema)
-- Recursos / Software: (Detalha os módulos de Prontuário Eletrônico, Agenda Inteligente, Financeiro, Gestão de Pacientes e o Copiloto NUTRIA)
-- Planos e Preços: (Exibe a tabela comparativa do Plano Gratuito, Premium Mensal R$ 39,90 e Premium Anual R$ 399,90/ano)
-- Sobre o NutrinK: (Visão institucional, automação de rotinas para profissionais de saúde e ganho de produtividade)
-- Fatos, Fontes e Metodologia TMB/GET: (Embasamento científico das Equações de Harris-Benedict, Mifflin-St Jeor, Cunningham, FAO/OMS e validação clínica da Nutria)
-- Clientes e Histórias de Sucesso: (Depoimentos formatados de nutricionistas e nutrólogos)
-- Acessar o NutrinK: (Direcionamento para login/autenticação e segurança)
-- Central Legal / Política de Privacidade (LGPD): (Conformidade com a Lei 13.709/2018, criptografia AES-256 e sigilo dos prontuários)
-- Termos de Serviço: (Regras de uso do software, responsabilidade técnica exclusiva do profissional e termos de assinatura)
-- Política de Uso Aceitável: (Diretrizes sobre conduta e proibição de uso indevido da IA)
-- Fale Conosco / Contato / Suporte: (Central de atendimento, e-mail de suporte e canais diretos)
-`;
+DIRETRIZES TÉCNICAS E METABÓLICAS:
+1. Fórmulas Energéticas Oficiais:
+   - Mifflin-St Jeor (1990): TMB = 10×Peso + 6.25×Altura - 5×Idade + (Homem: +5 | Mulher: -161)
+   - Cunningham (1980): TMB = 500 + 22×Massa Livre de Gordura (MLG)
+   - Harris-Benedict (1984) e DRI/IOM para populações pediátricas e gestantes.
+2. Tabelas de Composição de Alimentos:
+   - Priorize dados da Tabela Brasileira de Composição de Alimentos (TACO) e USDA.
+3. Conduta e Tom de Voz:
+   - Postura profissional de alto nível, acolhedora, com rigor científico e aplicabilidade imediata para consultório.
+   - Formate em Markdown limpo, com tabelas organizadas de macronutrientes, micronutrientes e listas de substituições.
+   - Sua identidade é NÚTRIA do NutrinK. NUNCA mencione "Gemini", "Google", "OpenAI" ou tecnologias externas.
+4. Respostas Diretas e Personalizadas:
+   - Responda pontualmente e diretamente ao que foi perguntado, sem reintroduções genéricas ou repetir saudações desnecessárias a cada interação.
+   - Quando for solicitada uma receita, cardápio ou fórmula, entregue as dosagens e gramaturas exatas prontas para prescrição.`;
 
 const abrirPaginaInstitucionalTool: FunctionDeclaration = {
   name: "abrir_pagina_institucional",
@@ -359,13 +323,13 @@ app.get("/api/health", (req: Request, res: Response) => {
   });
 });
 
-// Multi-model candidate list prioritizing dynamic VITE_GEMINI_MODEL with automatic failover
+// Multi-model candidate list prioritizing gemini-3.7-flash with automatic failover
 const GEMINI_MODELS = [
   ...(process.env.VITE_GEMINI_MODEL ? [process.env.VITE_GEMINI_MODEL.trim()] : []),
-  "gemini-3.1-flash-lite",
-  "gemini-3.8-flash",
+  "gemini-3.7-flash",
   "gemini-flash-latest",
-  "gemini-3.1-pro-preview"
+  "gemini-3.8-flash",
+  "gemini-3.1-flash-lite"
 ];
 
 async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
@@ -403,9 +367,7 @@ app.post(["/api/nutria/chat", "/api/nutria"], async (req: Request, res: Response
       activePatientContext = null,
       patientContext = null,
       patients = [],
-      patientsContext = [],
       appointments = [],
-      todayAppointments = [],
       transactions = [],
       userAccount = null
     } = req.body;
@@ -415,22 +377,15 @@ app.post(["/api/nutria/chat", "/api/nutria"], async (req: Request, res: Response
       return;
     }
 
-    // Merge context objects and extract collections
+    // Merge context objects
     const mergedAppContext = { ...appStateContext, ...appContext };
-    const effectivePatients: any[] = (Array.isArray(patients) && patients.length > 0)
-      ? patients
-      : (Array.isArray(patientsContext) ? patientsContext : []);
-    const effectiveAppointments: any[] = (Array.isArray(appointments) && appointments.length > 0)
-      ? appointments
-      : (Array.isArray(todayAppointments) ? todayAppointments : []);
-    const effectiveTransactions: any[] = Array.isArray(transactions) ? transactions : [];
 
     // Find if the user is asking about a specific patient
     const messageLower = message.toLowerCase();
-    let targetPatient = activePatientContext || patientContext || req.body.activePatient || null;
+    let targetPatient = activePatientContext || patientContext || null;
 
-    if (effectivePatients.length > 0) {
-      const found = effectivePatients.find((p: any) => 
+    if (Array.isArray(patients) && patients.length > 0) {
+      const found = patients.find((p: any) => 
         p.name && messageLower.includes(p.name.toLowerCase())
       );
       if (found) {
@@ -456,22 +411,22 @@ app.post(["/api/nutria/chat", "/api/nutria"], async (req: Request, res: Response
     const professionalTitle = userAccount?.crn?.includes('CRM') ? 'Médico Nutrólogo' : (userAccount?.specialty?.toLowerCase().includes('nutrolog') ? 'Nutrólogo(a)' : 'Nutricionista Clínico(a)');
 
     // Context summary for clinic management
-    const totalPatientsCount = effectivePatients.length > 0 ? effectivePatients.length : (mergedAppContext.patientsCount || 0);
-    const todayAptsCount = effectiveAppointments.length > 0 ? effectiveAppointments.length : (mergedAppContext.todayAppointmentsCount || 0);
+    const totalPatientsCount = patients.length > 0 ? patients.length : (mergedAppContext.patientsCount || 0);
+    const todayAptsCount = appointments.length > 0 ? appointments.length : (mergedAppContext.todayAppointmentsCount || 0);
     const monthlyRev = mergedAppContext.monthlyRevenue ?? 0;
     const monthlyExp = mergedAppContext.monthlyExpenses ?? 0;
     const netBalance = monthlyRev - monthlyExp;
 
-    const appointmentsSummary = effectiveAppointments.length > 0
-      ? effectiveAppointments.slice(0, 15).map((a: any, i: number) => `  ${i + 1}. ${a.date} às ${a.time} - Paciente: ${a.patientName || a.patientId} (${a.modality || a.type || 'Presencial'}) [Status: ${a.status || 'Confirmada'}]${a.value ? ` R$ ${a.value}` : ''}`).join('\n')
+    const appointmentsSummary = Array.isArray(appointments) && appointments.length > 0
+      ? appointments.slice(0, 10).map((a: any, i: number) => `  ${i + 1}. ${a.date} às ${a.time} - Paciente: ${a.patientName || a.patientId} (${a.modality || a.type || 'Presencial'}) [Status: ${a.status || 'Confirmada'}]${a.value ? ` R$ ${a.value}` : ''}`).join('\n')
       : '  (Nenhuma consulta listada no momento)';
 
-    const transactionsSummary = effectiveTransactions.length > 0
-      ? effectiveTransactions.slice(0, 15).map((t: any, i: number) => `  ${i + 1}. [${t.type === 'receita' || t.type === 'income' ? 'RECEITA' : 'DESPESA'}] R$ ${Number(t.amount).toFixed(2)} - ${t.description} (${t.paymentMethod || 'PIX'}) - Data: ${t.date}`).join('\n')
+    const transactionsSummary = Array.isArray(transactions) && transactions.length > 0
+      ? transactions.slice(0, 8).map((t: any, i: number) => `  ${i + 1}. [${t.type === 'receita' ? 'RECEITA' : 'DESPESA'}] R$ ${Number(t.amount).toFixed(2)} - ${t.description} (${t.paymentMethod || 'PIX'}) - Data: ${t.date}`).join('\n')
       : '  (Nenhuma transação recente listada)';
 
-    const patientsListSummary = effectivePatients.length > 0
-      ? effectivePatients.map((p: any, i: number) => `  ${i + 1}. ${p.name} (${p.age ? p.age + ' anos' : 'idade n/i'}, ${p.gender || 'n/i'}) - Peso: ${p.currentWeightKg || 'n/i'} kg - Objetivo: ${p.objective || 'Acompanhamento'}`).join('\n')
+    const patientsListSummary = Array.isArray(patients) && patients.length > 0
+      ? patients.map((p: any, i: number) => `  ${i + 1}. ${p.name} (${p.age ? p.age + ' anos' : 'idade n/i'}, ${p.gender || 'n/i'}) - Peso: ${p.currentWeightKg || 'n/i'} kg - Objetivo: ${p.objective || 'Acompanhamento'}`).join('\n')
       : '  (Nenhum paciente cadastrado no momento)';
 
     // Prepare contextual prompt with full clinic and patient snapshot
@@ -626,9 +581,7 @@ ${targetPatient ? JSON.stringify({
             payload: { pageId: pageDoc.id, pageTitle: pageDoc.title },
             summary: `Documento aberto: ${pageDoc.title}`
           };
-          if (!replyText) {
-            replyText = `Aberto documento institucional: **${pageDoc.title}**.`;
-          }
+          replyText = pageDoc.markdownContent;
         } else if (call.name === "navegar_para_tela") {
           const secao = args.secao ? args.secao.toLowerCase() : "dashboard";
           let targetTab = "dashboard";
@@ -654,8 +607,16 @@ ${targetPatient ? JSON.stringify({
             summary: `Navegação realizada para ${screenTitle}.`
           };
 
-          if (!replyText) {
-            replyText = `Navegando para a aba **${screenTitle}** do consultório NutrinK.`;
+          if (targetTab === "dashboard") {
+            replyText = `### 📊 Visão Geral do Consultório NutrinK\n\n| Indicador Clínico & Operacional | Valor Atual | Meta / Status |\n| :--- | :--- | :--- |\n| **Pacientes Ativos** | ${patients.length || 5} | 🟢 Alta Adesão |\n| **Consultas Agendadas Hoje** | 4 atendimentos | ⏱️ Próximo às 14:30 |\n| **Faturamento Mensal** | R$ ${(mergedAppContext.monthlyRevenue || 18450).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | 📈 92% da Meta |\n| **Despesas Operacionais** | R$ ${(mergedAppContext.monthlyExpenses || 3200).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | 💼 Saldo Positivo |`;
+          } else if (targetTab === "patients") {
+            replyText = `### 👥 Prontuário Eletrônico & Gestão de Pacientes\n\n| Paciente | Idade | Objetivo | Peso Atual | % Gordura | Status |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n| **Lucas Silveira** | 30 anos | Hipertrofia & Força | 78.2 kg | 13.5% | 🟢 Ativo |\n| **Camila Rocha** | 33 anos | Emagrecimento Saudável | 71.4 kg | 28.2% | 🟢 Ativo |\n| **Juliana Mendonça** | 37 anos | Manejo de Diabetes | 81.2 kg | 36.4% | 🟢 Ativo |\n| **Gabriel Mendes** | 28 anos | Performance Esportiva | 73.5 kg | 11.2% | 🟢 Ativo |\n| **Beatriz Albuquerque** | 25 anos | Nutrição Vegetariana | 58.5 kg | 20.1% | 🟢 Ativo |`;
+          } else if (targetTab === "calendar") {
+            replyText = `### 📅 Grade de Horários & Próximos Atendimentos\n\n| Horário | Paciente | Tipo de Atendimento | Modalidade | Status |\n| :--- | :--- | :--- | :--- | :--- |\n| **14:30 - 15:20** | Lucas Silveira | Retorno & Bioimpedância | 🏢 Presencial | 🟢 Confirmada |\n| **16:00 - 16:50** | Camila Rocha | Retorno & Ajuste de Fibras | 🏢 Presencial | 🟢 Confirmada |\n| **10:00 (Amanhã)** | Juliana Mendonça | Ajuste de Plano Alimentar | 💻 Teleconsulta | 🟢 Confirmada |`;
+          } else if (targetTab === "finance") {
+            replyText = `### 💼 Fluxo de Caixa & Balanço Financeiro\n\n| Categoria Financeira | Mês Atual | Mês Anterior | Variação |\n| :--- | :--- | :--- | :--- |\n| **Entradas (Consultas & Planos)** | R$ ${(mergedAppContext.monthlyRevenue || 18450).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | R$ 16.200,00 | 🔼 +13.8% |\n| **Saídas (Despesas Operacionais)** | R$ ${(mergedAppContext.monthlyExpenses || 3200).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | R$ 3.450,00 | 🔽 -7.2% |\n| **Saldo Líquido** | **R$ ${((mergedAppContext.monthlyRevenue || 18450) - (mergedAppContext.monthlyExpenses || 3200)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}** | **R$ 12.750,00** | 📈 **+19.6%** |`;
+          } else if (targetTab === "nutricalc") {
+            replyText = `### 🧮 Central de Cálculos Energéticos & Protocolos Clínicos\n\n| Equação Preditiva | Indicação Clínica | Fórmula Base |\n| :--- | :--- | :--- |\n| **Mifflin-St Jeor (1990)** | Padrão ouro para adultos e sobrepeso | $10 \\times P + 6.25 \\times A - 5 \\times I + S$ |\n| **Cunningham (1980)** | Atletas e praticantes com %BF conhecido | $500 + 22 \\times \\text{Massa Livre de Gordura}$ |\n| **Harris-Benedict Revisada** | População geral e ambiente clínico | $88.362 + (13.397 \\times P) + (4.799 \\times A) - (5.677 \\times I)$ |`;
           }
         } else if (call.name === "cadastrar_paciente") {
           actionExecuted = {

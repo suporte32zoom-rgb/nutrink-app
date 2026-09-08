@@ -63,6 +63,10 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
   isLoading: externalLoading = false,
   activePatient,
   patientContext,
+  todayAppointments,
+  patientsCount,
+  monthlyRevenue,
+  monthlyExpenses,
   isFloating = false,
   onCloseFloating,
   userAccount,
@@ -276,11 +280,20 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
     try {
       const patientData = activePatient || patientContext || null;
 
-      // Chamada direta para a API oficial do Gemini com modelo dinâmico
+      // Chamada direta para a API oficial do Gemini com modelo Gemini 3.7 Flash
       const result = await callNutriaDirect({
         message: input,
         activePatient: patientData,
+        patientContext: patientData,
+        appointments: todayAppointments,
         userAccount: userAccount,
+        appContext: {
+          patientsCount: patientsCount,
+          todayAppointmentsCount: todayAppointments ? todayAppointments.length : undefined,
+          monthlyRevenue: monthlyRevenue,
+          monthlyExpenses: monthlyExpenses,
+          userPlan: userAccount?.plan
+        },
         conversationHistory: messages.slice(-8).map(m => ({
           role: m.role,
           content: m.content
