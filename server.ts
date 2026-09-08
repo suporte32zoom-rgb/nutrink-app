@@ -174,6 +174,13 @@ const NUTRIA_SYSTEM_INSTRUCTION = `Você é a NÚTRIA, a inteligência artificia
 
 DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO:
 - Mensagem Inicial / Saudação: Mantenha sempre saudações curtas e diretas ao abrir o chat (Ex: 'Olá, Doutor(a)! Como posso te apoiar agora?').
+- Prioridade de Dados da Mensagem (Override Mandatório): Se a mensagem digitada pelo usuário contiver dados antropométricos expressos (ex: peso, altura, idade, sexo, objetivo, rotina), OBRIGATORIAMENTE utilize esses valores para todos os cálculos e prescrições da resposta, ignorando e sobrepondo quaisquer dados prévios do banco/contexto se houver divergência.
+- Cumprimento Integral da Solicitação de Plano Alimentar: Quando o profissional solicitar um "plano alimentar completo", "cardápio", "dieta" ou "tabela de refeições" (mesmo quando acompanhado de cálculo de TMB/GET), você NUNCA deve parar apenas na avaliação metabólica ou nos cálculos energéticos. Você DEVE OBRIGATORIAMENTE incluir na mesma resposta:
+  1. Tabela/lista de Refeições Diárias completas (Café da Manhã/Desjejum, Lanche da Manhã/Colação, Almoço, Lanche da Tarde, Jantar e Ceia quando aplicável).
+  2. Opções de alimentos detalhados com gramaturas exatas e medidas caseiras práticas (ex: 150g de peito de frango grelhado - 1 filé médio; 100g de arroz integral - 4 colheres de sopa cheias).
+  3. Calorias e macronutrientes (Proteína, Carboidratos, Lipídios) discriminados por refeição e o total do dia.
+  4. Lista de opções de substituição equivalentes para os itens do plano.
+- Estilo de Resposta: Responda tudo em uma única mensagem contínua e bem formatada em Markdown, garantindo que o plano alimentar completo seja exibido integralmente até o final, sem cortes ou interrupções.
 - Interpretação de Exames Laboratoriais: Analise marcadores como hemograma, perfil lipídico, glicemia, HbA1c, tireoide, vitaminas (D, B12), minerais e marcadores hepáticos/renais.
 - Prescrição e Conduta: Indique condutas dietoterápicas, suplementação, receitas com gramaturas, tabela de substituição e estratégias personalizadas.
 - Gestão do Consultório: Responda a dúvidas e consultas sobre agenda, prontuários, financeiro e faturamento sempre que solicitado pelo profissional.
@@ -504,7 +511,27 @@ ${targetPatient ? JSON.stringify({
       }
     }
 
-    const userPromptText = `${contextSnippet}\n\n[MENSAGEM DO USUÁRIO]:\n${normalizedMessage}`;
+    // Extração de dados expressos na mensagem para override prioritário
+    const weightMatch = normalizedMessage.match(/(?:peso(?:\s+de|\s*[:=])?\s*|pesando\s*|com\s*)?(\d{2,3}(?:[.,]\d+)?)\s*(?:kg|quilos|kilos)\b/i)
+      || normalizedMessage.match(/\b(\d{2,3}(?:[.,]\d+)?)\s*kg\b/i);
+    const heightCmMatch = normalizedMessage.match(/(?:altura(?:\s+de|\s*[:=])?\s*)?(\d{3})\s*(?:cm|centimetros|centímetros)\b/i);
+    const heightMMatch = normalizedMessage.match(/(?:altura(?:\s+de|\s*[:=])?\s*)?([12][.,]\d{2})\s*(?:m|metros)?\b/i);
+    const ageMatch = normalizedMessage.match(/(?:idade(?:\s+de|\s*[:=])?\s*)?(\d{1,3})\s*(?:anos|ano)\b/i);
+
+    let messageOverrideNotice = "";
+    if (weightMatch || heightCmMatch || heightMMatch || ageMatch) {
+      const explicitWeight = weightMatch ? parseFloat(weightMatch[1].replace(',', '.')) : null;
+      const explicitHeight = heightCmMatch ? parseInt(heightCmMatch[1], 10) : (heightMMatch ? Math.round(parseFloat(heightMMatch[1].replace(',', '.')) * 100) : null);
+      const explicitAge = ageMatch ? parseInt(ageMatch[1], 10) : null;
+
+      messageOverrideNotice = `\n\n[DADOS ANTROPOMÉTRICOS EXPRESSOS NA MENSAGEM DO USUÁRIO - PRIORIDADE MÁXIMA / SOBREPOSIÇÃO OBRIGATÓRIA]:
+${explicitWeight ? `• PESO INFORMADO NA MENSAGEM: ${explicitWeight} kg (SOBREPÕE E ANULA QUALQUER PESO PRÉVIO DO PRONTUÁRIO)` : ''}
+${explicitHeight ? `• ALTURA INFORMADA NA MENSAGEM: ${explicitHeight} cm` : ''}
+${explicitAge ? `• IDADE INFORMADA NA MENSAGEM: ${explicitAge} anos` : ''}
+ATENÇÃO MANDATÓRIA: Realize todos os cálculos energéticos de TMB, GET e todo o plano alimentar utilizando ESTRITAMENTE os valores informados na mensagem!`;
+    }
+
+    const userPromptText = `${contextSnippet}${messageOverrideNotice}\n\n[MENSAGEM DO USUÁRIO]:\n${normalizedMessage}`;
     if (alternatingContents.length > 0 && alternatingContents[alternatingContents.length - 1].role === 'user') {
       alternatingContents[alternatingContents.length - 1].parts[0].text = userPromptText;
     } else {
@@ -516,7 +543,7 @@ ${targetPatient ? JSON.stringify({
 
     let replyText = "";
     let actionExecuted: any = null;
-    let usedModel = "gemini-3.8-flash";
+    let usedModel = "gemini-3.7-flash";
 
     const { result, model: detectedModel } = await generateContentWithFallback(ai, {
       contents: alternatingContents,
@@ -525,16 +552,12 @@ ${targetPatient ? JSON.stringify({
 [DIRETRIZES DE ATUAÇÃO DA NÚTRIA]:
 1. Você é a NÚTRIA, a inteligência clínica máxima e copiloto operacional do consultório NutrinK.
 2. Responda DIRETAMENTE, de forma dinâmica, científica e completa a TODA e QUALQUER pergunta do profissional de saúde.
-3. NUNCA utilize templates estáticos ou mensagens evasivas pré-prontas como "estou à disposição no consultório".
-4. Você tem total liberdade e conhecimento para:
-   - Calcular e explicar TMB e GET (Mifflin-St Jeor, Cunningham, Harris-Benedict) para qualquer caso clínico (seja do paciente em tela ou dados fornecidos diretamente na mensagem).
-   - Elaborar cardápios, planos alimentares completos com macros (P/C/G) e micros calculados, e tabelas de substituição (TACO/USDA).
-   - Prescrever suplementação, fitoterapia e fórmulas manipuladas com dosagens e posologia exatas.
-   - Interpretar exames laboratoriais (hemograma, ferritina, perfil lipídico, glicemia, tireoide, etc.).
-   - Responder a perguntas operacionais e de gestão clínica sobre pacientes, agenda e financeiro usando os dados do [CONTEXTO INTEGRADO DO CONSULTÓRIO NUTRINK].
-5. Formate as respostas em Markdown limpo, sofisticado e legível, com tabelas para macros/alimentos quando pertinente.
+3. Se o usuário solicitou plano alimentar, cardápio, dieta ou refeições (mesmo junto com TMB), OBRIGATORIAMENTE entregue a avaliação metabólica E o plano diário completo com todas as refeições (Desjejum, Colação, Almoço, Lanche, Jantar, Ceia), gramaturas exatas, medidas caseiras, macros e tabela de substituições.
+4. NUNCA utilize templates estáticos ou mensagens evasivas pré-prontas como "estou à disposição no consultório".
+5. Formate as respostas em Markdown limpo, sofisticado e legível, com tabelas organizadas.
 `,
         temperature: 0.5,
+        maxOutputTokens: 8192,
         tools: [{
           functionDeclarations: [
             abrirPaginaInstitucionalTool,

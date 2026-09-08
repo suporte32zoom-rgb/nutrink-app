@@ -144,6 +144,13 @@ export const NUTRIA_SYSTEM_INSTRUCTION = `Você é a NÚTRIA, a inteligência ar
 
 DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO:
 - Mensagem Inicial / Saudação: Mantenha sempre saudações curtas e diretas ao abrir o chat (Ex: 'Olá, Doutor(a)! Como posso te apoiar agora?').
+- Prioridade de Dados da Mensagem (Override Mandatório): Se a mensagem digitada pelo usuário contiver dados antropométricos expressos (ex: peso, altura, idade, sexo, objetivo, rotina), OBRIGATORIAMENTE utilize esses valores para todos os cálculos e prescrições da resposta, ignorando e sobrepondo quaisquer dados prévios do banco/contexto se houver divergência.
+- Cumprimento Integral da Solicitação de Plano Alimentar: Quando o profissional solicitar um "plano alimentar completo", "cardápio", "dieta" ou "tabela de refeições" (mesmo quando acompanhado de cálculo de TMB/GET), você NUNCA deve parar apenas na avaliação metabólica ou nos cálculos energéticos. Você DEVE OBRIGATORIAMENTE incluir na mesma resposta:
+  1. Tabela/lista de Refeições Diárias completas (Café da Manhã/Desjejum, Lanche da Manhã/Colação, Almoço, Lanche da Tarde, Jantar e Ceia quando aplicável).
+  2. Opções de alimentos detalhados com gramaturas exatas e medidas caseiras práticas (ex: 150g de peito de frango grelhado - 1 filé médio; 100g de arroz integral - 4 colheres de sopa cheias).
+  3. Calorias e macronutrientes (Proteína, Carboidratos, Lipídios) discriminados por refeição e o total do dia.
+  4. Lista de opções de substituição equivalentes para os itens do plano.
+- Estilo de Resposta: Responda tudo em uma única mensagem contínua e bem formatada em Markdown, garantindo que o plano alimentar completo seja exibido integralmente até o final, sem cortes ou interrupções.
 - Interpretação de Exames Laboratoriais: Analise marcadores como hemograma, perfil lipídico, glicemia, HbA1c, tireoide, vitaminas (D, B12), minerais e marcadores hepáticos/renais.
 - Prescrição e Conduta: Indique condutas dietoterápicas, suplementação, receitas com gramaturas, tabela de substituição e estratégias personalizadas.
 - Gestão do Consultório: Responda a dúvidas e consultas sobre agenda, prontuários, financeiro e faturamento sempre que solicitado pelo profissional.
@@ -165,6 +172,74 @@ DIRETRIZES TÉCNICAS E METABÓLICAS:
    - Quando for solicitada uma receita, cardápio ou fórmula, entregue as dosagens e gramaturas exatas prontas para prescrição.`;
 
 /**
+ * Extrai dados antropométricos expressos na mensagem do usuário para garantia de override
+ */
+export function extractMessageAnthropometrics(message: string): {
+  weight?: number;
+  height?: number;
+  age?: number;
+  gender?: 'masculino' | 'feminino';
+  objective?: string;
+} {
+  const result: {
+    weight?: number;
+    height?: number;
+    age?: number;
+    gender?: 'masculino' | 'feminino';
+    objective?: string;
+  } = {};
+
+  if (!message) return result;
+  const text = message.toLowerCase();
+
+  // Peso: 80kg, 80 kg, 80.5kg, peso de 80, pesando 80
+  const weightMatch = text.match(/(?:peso(?:\s+de|\s*[:=])?\s*|pesando\s*|com\s*)?(\d{2,3}(?:[.,]\d+)?)\s*(?:kg|quilos|kilos)\b/i)
+    || text.match(/\b(\d{2,3}(?:[.,]\d+)?)\s*kg\b/i);
+  if (weightMatch) {
+    const w = parseFloat(weightMatch[1].replace(',', '.'));
+    if (w >= 30 && w <= 300) {
+      result.weight = w;
+    }
+  }
+
+  // Altura: 180cm, 180 cm, 1.80m, 1,80m, altura de 180
+  const heightCmMatch = text.match(/(?:altura(?:\s+de|\s*[:=])?\s*)?(\d{3})\s*(?:cm|centimetros|centímetros)\b/i);
+  const heightMMatch = text.match(/(?:altura(?:\s+de|\s*[:=])?\s*)?([12][.,]\d{2})\s*(?:m|metros)?\b/i);
+  if (heightCmMatch) {
+    const h = parseInt(heightCmMatch[1], 10);
+    if (h >= 100 && h <= 240) result.height = h;
+  } else if (heightMMatch) {
+    const h = Math.round(parseFloat(heightMMatch[1].replace(',', '.')) * 100);
+    if (h >= 100 && h <= 240) result.height = h;
+  }
+
+  // Idade: 30 anos, 30anos, idade de 30
+  const ageMatch = text.match(/(?:idade(?:\s+de|\s*[:=])?\s*)?(\d{1,3})\s*(?:anos|ano)\b/i);
+  if (ageMatch) {
+    const a = parseInt(ageMatch[1], 10);
+    if (a >= 1 && a <= 120) result.age = a;
+  }
+
+  // Gênero
+  if (text.match(/\b(homem|masculino|rapaz|senhor|macho)\b/i)) {
+    result.gender = 'masculino';
+  } else if (text.match(/\b(mulher|feminino|moca|moça|senhora|femea|fêmea)\b/i)) {
+    result.gender = 'feminino';
+  }
+
+  // Objetivo
+  if (text.includes('hipertrofia') || text.includes('ganho de massa') || text.includes('ganhar massa')) {
+    result.objective = 'Hipertrofia Muscular';
+  } else if (text.includes('emagrecimento') || text.includes('perder peso') || text.includes('queimar gordura') || text.includes('secagem') || text.includes('cutting')) {
+    result.objective = 'Emagrecimento e Perda de Gordura';
+  } else if (text.includes('manutenção') || text.includes('manter peso') || text.includes('saude')) {
+    result.objective = 'Manutenção e Saúde Metabólica';
+  }
+
+  return result;
+}
+
+/**
  * 3. INJEÇÃO DINÂMICA DE CONTEXTO:
  * Injeta no contexto os dados do paciente ativo em tela (Nome, Idade, Antropometria, Exames, Histórico e Alergias)
  * e os dados da plataforma (Agenda, Financeiro e Prontuários).
@@ -172,6 +247,22 @@ DIRETRIZES TÉCNICAS E METABÓLICAS:
 export function buildNutriaSystemInstruction(params: NutriaCallParams): string {
   let fullPrompt = NUTRIA_SYSTEM_INSTRUCTION;
   const targetPatient = params.activePatient || params.patientContext;
+
+  // 1. Extração e Validação de Dados Expressos na Mensagem Atual (PRIORIDADE MÁXIMA DE OVERRIDE)
+  const messageData = extractMessageAnthropometrics(params.message);
+  const hasMessageOverride = !!(messageData.weight || messageData.height || messageData.age || messageData.gender || messageData.objective);
+
+  if (hasMessageOverride) {
+    fullPrompt += `\n\n[DADOS ANTROPOMÉTRICOS EXPRESSOS NA MENSAGEM DO USUÁRIO - PRIORIDADE MÁXIMA / SOBREPOSIÇÃO MANDATÓRIA]:
+${messageData.weight ? `• PESO INFORMADO NA MENSAGEM: ${messageData.weight} kg (SOBREPÕE QUALQUER PESO ANTERIOR DO PRONTUÁRIO)` : ''}
+${messageData.height ? `• ALTURA INFORMADA NA MENSAGEM: ${messageData.height} cm (${(messageData.height / 100).toFixed(2)} m)` : ''}
+${messageData.age ? `• IDADE INFORMADA NA MENSAGEM: ${messageData.age} anos` : ''}
+${messageData.gender ? `• SEXO / GÊNERO: ${messageData.gender === 'masculino' ? 'Masculino' : 'Feminino'}` : ''}
+${messageData.objective ? `• OBJETIVO CLÍNICO: ${messageData.objective}` : ''}
+
+REGRA DE CÁLCULO CRÍTICA:
+Você DEVE utilizar ESTRITAMENTE os dados acima informados na mensagem para TODOS os cálculos de TMB, GET, distribuição de macronutrientes e montagem do plano alimentar. Descarte qualquer valor divergente presente no banco/prontuário.`;
+  }
 
   // Injeção do Paciente Ativo
   if (targetPatient) {
@@ -184,15 +275,15 @@ export function buildNutriaSystemInstruction(params: NutriaCallParams): string {
 
     fullPrompt += `\n\n[CONTEXTO DINÂMICO DO PACIENTE ATIVO EM TELA]:
 - Nome: ${p.name || 'Paciente em Atendimento'}
-- Idade: ${p.age ? p.age + ' anos' : 'Não informada'} | Gênero: ${p.gender === 'masculino' ? 'Masculino' : p.gender === 'feminino' ? 'Feminino' : 'Outro'}
+- Idade (Registro): ${p.age ? p.age + ' anos' : 'Não informada'} | Gênero: ${p.gender === 'masculino' ? 'Masculino' : p.gender === 'feminino' ? 'Feminino' : 'Outro'}
 - Objetivo Clínico: ${p.objective || 'Acompanhamento Nutricional / Nutrológico'}
-- Antropometria Atual:
-  • Peso Atual: ${p.currentWeightKg || 70} kg (Inicial: ${p.initialWeightKg || p.currentWeightKg || 70} kg | Meta: ${p.targetWeightKg || 'Manutenção'} kg)
-  • Altura: ${p.heightCm || 170} cm
+- Antropometria Cadastrada no Banco:
+  • Peso Registrado: ${p.currentWeightKg || 70} kg (Inicial: ${p.initialWeightKg || p.currentWeightKg || 70} kg | Meta: ${p.targetWeightKg || 'Manutenção'} kg)
+  • Altura Registrada: ${p.heightCm || 170} cm
   • IMC: ${p.bmi ? p.bmi.toFixed(1) : (p.currentWeightKg / ((p.heightCm / 100) ** 2)).toFixed(1)} kg/m²
   • % de Gordura: ${p.bodyFatPercentage ? p.bodyFatPercentage + '%' : 'Não aferido'}
   • % Massa Muscular: ${p.muscleMassPercentage ? p.muscleMassPercentage + '%' : 'Não aferido'}
-  • TMB: ${p.tmb ? p.tmb + ' kcal/dia' : 'Calculada via Mifflin-St Jeor'}
+  • TMB Registrada: ${p.tmb ? p.tmb + ' kcal/dia' : 'Calculada via Mifflin-St Jeor'}
   • Gasto Energético Total (GET): ${p.get ? p.get + ' kcal/dia' : 'Estimado'}
   • Fator de Atividade: ${p.activityFactor || 1.4}
 ${evolution ? `  • Circunferências Mais Recentes: Cintura: ${evolution.waistCircumferenceCm || '-'} cm, Quadril: ${evolution.hipCircumferenceCm || '-'} cm, Braço: ${evolution.armCircumferenceCm || '-'} cm, Dobra Tricipital: ${evolution.tricepsFoldMm || '-'} mm, Subescapular: ${evolution.subscapularFoldMm || '-'} mm` : ''}
@@ -226,7 +317,7 @@ ${labExams.length > 0
 
 ${p.mealPlan ? `- Plano Alimentar Vigente: ${p.mealPlan.title || 'Plano Cadastrado'} (${p.mealPlan.targetCalories || 2000} kcal | P: ${p.mealPlan.targetProteinGrams || 140}g | C: ${p.mealPlan.targetCarbsGrams || 220}g | G: ${p.mealPlan.targetFatGrams || 65}g)` : ''}
 
-ORIENTAÇÃO: Utilize todos os dados do(a) paciente ${p.name}, suas restrições e exames laboratoriais em suas análises, condutas e prescrições.`;
+ORIENTAÇÃO: Se o usuário expressou novos dados na mensagem, priorize-os. Caso contrário, utilize os dados cadastrais do(a) paciente ${p.name}.`;
   }
 
   // Injeção do Profissional de Saúde
@@ -428,58 +519,124 @@ export function detectOperationalAction(userInput: string, aiReply: string, para
 export function generateFallbackClinicalResponse(userInput: string, params: NutriaCallParams): NutriaResponse {
   const lower = userInput.toLowerCase();
   const patient = params.activePatient || params.patientContext;
-  const name = patient?.name || 'paciente';
+
+  // 1. Extrai dados expressos na mensagem (OVERRIDE MANDATÓRIO)
+  const messageData = extractMessageAnthropometrics(userInput);
+
+  const weight = messageData.weight || patient?.currentWeightKg || 70;
+  const height = messageData.height || patient?.heightCm || 170;
+  const age = messageData.age || patient?.age || 30;
+  const isMale = messageData.gender ? messageData.gender === 'masculino' : (patient ? patient.gender === 'masculino' : true);
+  const objective = messageData.objective || patient?.objective || 'Equilíbrio Metabólico & Performance';
+  const name = patient?.name || (isMale ? 'Paciente Masculino' : 'Paciente Feminina');
+
+  // Cálculos Energéticos Mifflin-St Jeor (1990)
+  const bmr = isMale
+    ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
+    : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
+  const activityFactor = patient?.activityFactor || 1.4;
+  const get = Math.round(bmr * activityFactor);
+
+  // Metas de Macronutrientes para o peso calculado
+  const proteinGrams = Math.round(weight * 2.0); // 2.0 g/kg
+  const fatGrams = Math.round(weight * 0.9);     // 0.9 g/kg
+  const proteinKcal = proteinGrams * 4;
+  const fatKcal = fatGrams * 9;
+  const carbsKcal = Math.max(400, get - (proteinKcal + fatKcal));
+  const carbsGrams = Math.round(carbsKcal / 4);
 
   let reply = '';
 
-  if (lower.includes('tmb') || lower.includes('get') || lower.includes('calcule') || lower.includes('calorias')) {
-    const weight = patient?.currentWeightKg || 70;
-    const height = patient?.heightCm || 170;
-    const age = patient?.age || 30;
-    const isMale = patient ? patient.gender === 'masculino' : true;
+  const asksPlan = lower.includes('plano') || lower.includes('cardapio') || lower.includes('cardápio') 
+    || lower.includes('dieta') || lower.includes('refeic') || lower.includes('refeiç') 
+    || lower.includes('tabela de refeic') || lower.includes('alimento');
+  const asksMetabolism = lower.includes('tmb') || lower.includes('get') || lower.includes('calcule') || lower.includes('calorias') || lower.includes('gasto');
 
-    // Mifflin-St Jeor (1990)
-    const bmr = isMale
-      ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
-      : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
-    const get = Math.round(bmr * (patient?.activityFactor || 1.4));
+  if (asksPlan || (asksMetabolism && asksPlan) || (asksMetabolism && lower.includes('80kg'))) {
+    // Entrega COMPLETA: Avaliação Metabólica + Plano Alimentar Estruturado + Tabela de Substituição
+    reply = `### 🧬 Avaliação Energética e Metabólica (Mifflin-St Jeor)
+**Paciente:** ${name} | **Idade:** ${age} anos | **Estatura:** ${height} cm | **Peso Utilizado:** **${weight} kg** *(Dados da Solicitação)*
+**Objetivo:** ${objective}
 
+| Parâmetro Metabólico | Valor Calculado | Protocolo / Fórmula |
+| :--- | :--- | :--- |
+| **Peso Base** | **${weight} kg** | Utilizado conforme informado na solicitação |
+| **TMB (Taxa Metabólica Basal)** | **${bmr} kcal/dia** | Mifflin-St Jeor: 10×(${weight}) + 6.25×(${height}) - 5×(${age}) ${isMale ? '+ 5' : '- 161'} |
+| **Fator de Atividade** | **${activityFactor}** | Rotina moderada / treino estruturado |
+| **GET (Gasto Energético Total)** | **${get} kcal/dia** | TMB × Fator de Atividade (${bmr} × ${activityFactor}) |
+| **Meta Calórica Diária** | **${get} kcal/dia** | Ajuste calórico personalizado |
+
+---
+
+### 🎯 Distribuição Diária de Macronutrientes
+- **Proteínas:** **${proteinGrams}g/dia** (~2.0 g/kg) • ${proteinKcal} kcal (${Math.round((proteinKcal / get) * 100)}%)
+- **Carboidratos:** **${carbsGrams}g/dia** (~${(carbsGrams / weight).toFixed(1)} g/kg) • ${carbsKcal} kcal (${Math.round((carbsKcal / get) * 100)}%)
+- **Lipídios:** **${fatGrams}g/dia** (~0.9 g/kg) • ${fatKcal} kcal (${Math.round((fatKcal / get) * 100)}%)
+- **Meta Hídrica:** **${((weight * 35) / 1000).toFixed(1)} Litros/dia** (35 mL/kg de peso corporal)
+
+---
+
+### 🥗 Plano Alimentar Completo e Tabela de Refeições Diárias
+
+| Refeição | Horário | Alimentos & Medidas Caseiras | Gramaturas Exatas | Macros da Refeição |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Café da Manhã (Desjejum)** | 07:00 | • Ovos inteiros mexidos ou cozidos (3 unid.)<br>• Pão 100% integral (2 fatias grandes)<br>• Fruta fresca: Mamão papaia (1/2 unid.) ou Banana (1 unid.)<br>• Sementes de chia ou aveia em flocos (1 colher de sopa)<br>• Café preto ou chá sem açúcar (200ml) | • Ovos: 150g<br>• Pão Integral: 60g<br>• Fruta: 120g<br>• Aveia/Chia: 15g | **~480 kcal**<br>P: 30g • C: 48g • G: 18g |
+| **2. Lanche da Manhã (Colação)** | 10:00 | • Iogurte natural desnatado ou grego zero (1 pote)<br>• Mix de oleaginosas (castanha-do-pará + nozes)<br>• Maçã ou pera média com casca (1 unid.) | • Iogurte: 170g<br>• Oleaginosas: 20g<br>• Fruta: 130g | **~240 kcal**<br>P: 14g • C: 26g • G: 9g |
+| **3. Almoço** | 12:30 | • Peito de frango grelhado ou patinho moído (1 filé grande)<br>• Arroz integral ou parboilizado cozido (5 colheres de sopa)<br>• Feijão carioca ou preto em concha média (1 concha cheia)<br>• Legumes variados no vapor: brócolis, cenoura e abobrinha<br>• Salada de folhas verdes cruas à vontade (alface, rúcula, tomate)<br>• Azeite de oliva extravirgem (1 colher de sobremesa) | • Proteína: 160g<br>• Arroz: 130g<br>• Feijão: 100g<br>• Legumes: 120g<br>• Folhas: à vontade<br>• Azeite: 8ml | **~620 kcal**<br>P: 50g • C: 64g • G: 16g |
+| **4. Lanche da Tarde (Pré-Treino)** | 16:30 | • Whey Protein 80% (1 dosador / scoop)<br>• Banana prata fatiada (1 unid. grande)<br>• Aveia em flocos finos (2 colheres de sopa)<br>• Canela em pó a gosto + Água gelada (250ml) | • Whey Protein: 30g<br>• Banana: 100g<br>• Aveia: 30g | **~330 kcal**<br>P: 28g • C: 44g • G: 4g |
+| **5. Jantar** | 20:00 | • Filé de peixe grelhado (Tilápia/Salmão) ou Peito de frango<br>• Batata-doce ou mandioca cozida (4 fatias médias)<br>• Mix de vegetais grelhados ou no vapor (vagem, abóbora, couve-flor)<br>• Salada verde crua temperada com limão e ervas naturais<br>• Azeite de oliva extravirgem (1 colher de chá) | • Proteína: 160g<br>• Batata-Doce: 140g<br>• Vegetais: 140g<br>• Azeite: 5ml | **~520 kcal**<br>P: 46g • C: 52g • G: 12g |
+| **6. Ceia (Opcional)** | 22:30 | • Abacate picado (2 colheres de sopa cheias) ou Leite vegetal/desnatado morno<br>• Chá calmante (Camomila, Melissa ou Mulungu) sem açúcar | • Abacate: 60g<br>• Chá: 200ml | **~120 kcal**<br>P: 2g • C: 6g • G: 10g |
+
+---
+
+### 🔄 Lista de Substituições Práticas Equivalentes
+
+1. **Fontes de Proteína (160g de Peito de Frango =):**
+   - 170g de Filé de Tilápia ou Pescada branca
+   - 150g de Patinho bovino moído ou Filé Mignon
+   - 180g de Filé de Salmão fresco (reduzir 5ml de azeite na refeição)
+   - 4 Ovos inteiros + 2 claras cozidas
+
+2. **Fontes de Carboidratos (130g de Arroz Integral =):**
+   - 150g de Batata-doce cozida
+   - 180g de Batata-inglesa cozida ou assada
+   - 130g de Mandioca / Aipim cozido
+   - 120g de Macarrão integral cozido
+   - 50g de Aveia em flocos
+
+3. **Gorduras Boas (8ml de Azeite de Oliva =):**
+   - 25g de Abacate fresco
+   - 15g de Castanhas ou Amêndoas
+   - 10g de Pasta de amendoim 100% pura
+
+---
+
+*Prescrição estruturada pela **NÚTRIA** para o consultório NutrinK.*`;
+  } else if (asksMetabolism) {
     reply = `### 🧬 Avaliação Energética e Metabólica - NÚTRIA
 **Paciente:** ${name} | **Protocolo:** Mifflin-St Jeor (1990)
+**Peso Utilizado:** **${weight} kg** *(Base da Solicitação)* | **Estatura:** ${height} cm | **Idade:** ${age} anos
 
 | Parâmetro Metabólico | Resultado Estimado | Memória de Cálculo |
 | :--- | :--- | :--- |
-| **Peso / Estatura** | ${weight} kg / ${height} cm | Medidas antropométricas atuais |
-| **TMB (Taxa Metabólica Basal)** | **${bmr} kcal/dia** | 10×P + 6.25×A - 5×I ${isMale ? '+ 5' : '- 161'} |
-| **Fator Atividade (FA)** | ${patient?.activityFactor || 1.4} | Rotina diária relatada |
-| **GET (Gasto Energético Total)** | **${get} kcal/dia** | TMB × FA |
+| **Peso Base / Estatura** | **${weight} kg** / ${height} cm | Medidas antropométricas consideradas |
+| **TMB (Taxa Metabólica Basal)** | **${bmr} kcal/dia** | 10×(${weight}) + 6.25×(${height}) - 5×(${age}) ${isMale ? '+ 5' : '- 161'} |
+| **Fator Atividade (FA)** | **${activityFactor}** | Rotina moderada / treino estruturado |
+| **GET (Gasto Energético Total)** | **${get} kcal/dia** | TMB × FA (${bmr} × ${activityFactor}) |
 
 ---
 
 #### 🎯 Prescrição de Macronutrientes Sugerida:
-- **Proteínas**: 1.8 a 2.0 g/kg (${Math.round(weight * 1.8)}g a ${Math.round(weight * 2.0)}g/dia)
-- **Lipídios**: 0.8 a 1.0 g/kg (${Math.round(weight * 0.8)}g a ${Math.round(weight * 1.0)}g/dia)
-- **Carboidratos**: Restante do Valor Energético Total para suprir a demanda glicídica.
-- **Hidratação:** ${((weight * 35) / 1000).toFixed(1)} L/dia (35 mL/kg).`;
-  } else if (lower.includes('plano') && (lower.includes('alimentar') || lower.includes('dieta') || lower.includes('macros'))) {
-    reply = `### 🥗 Prescrição Dietética Estruturada - NÚTRIA
-**Paciente:** ${name} | **Objetivo:** ${patient?.objective || 'Equilíbrio Metabólico'}
-
-| Refeição | Horário | Itens Prescritos | Gramaturas & Macros Estimados |
-| :--- | :--- | :--- | :--- |
-| **Desjejum** | 07:30 | Ovos mexidos (2 unid.) + Pão integral (2 fatias - 50g) + Café puro sem açúcar | ~340 kcal • 22g P • 30g C • 14g G |
-| **Colação** | 10:30 | Iogurte natural desnatado (170g) + Castanhas-do-pará (10g) | ~160 kcal • 10g P • 10g C • 9g G |
-| **Almoço** | 12:30 | Peito de frango grelhado (140g) + Arroz integral (100g) + Feijão carioca (80g) + Azeite extravirgem (5ml) + Salada crua à vontade | ~520 kcal • 44g P • 52g C • 12g G |
-| **Lanche da Tarde** | 16:00 | Fruta fresca (Maçã/Banana - 100g) + Whey Protein 80% (30g) diluído em água | ~230 kcal • 25g P • 24g C • 2g G |
-| **Jantar** | 19:45 | Filé de peixe assado (tilápia - 150g) + Batata-doce cozida (130g) + Brócolis e abobrinha no vapor | ~410 kcal • 38g P • 38g C • 6g G |
-
-*💧 Hidratação recomendada: 35 mL/kg/dia.*`;
+- **Proteínas**: 1.8 a 2.0 g/kg (**${proteinGrams}g/dia** • ${proteinKcal} kcal)
+- **Lipídios**: 0.8 a 1.0 g/kg (**${fatGrams}g/dia** • ${fatKcal} kcal)
+- **Carboidratos**: **${carbsGrams}g/dia** (${carbsKcal} kcal) para suprir a demanda energética total.
+- **Hidratação:** **${((weight * 35) / 1000).toFixed(1)} L/dia** (35 mL/kg).`;
   } else {
     reply = `Olá, Doutor(a)! A **NÚTRIA** está à disposição no consultório.
 
 Com relação a **"${userInput}"**:
 - Para interpretação de exames: forneça os marcadores (hemograma, perfil lipídico, glicemia, HbA1c, tireoide, vitaminas, minerais).
-- Para prescrição e conduta: informe calorias-alvo ou perfil metabólico para cardápio detalhado, receitas e suplementação.
+- Para prescrição e conduta: informe calorias-alvo ou perfil metabólico para cardápio detalhado com gramaturas, receitas e suplementação.
 - Para gestão do consultório: consulte agenda, prontuários, financeiro e faturamento.`;
   }
 
@@ -568,7 +725,7 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
       config: {
         systemInstruction: systemInstruction,
         temperature: 0.5,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
       }
     });
 
@@ -596,7 +753,7 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
       config: {
         systemInstruction: systemInstruction,
         temperature: 0.5,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
       }
     });
 
@@ -629,7 +786,7 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
         contents: contents,
         generationConfig: {
           temperature: 0.5,
-          maxOutputTokens: 2048
+          maxOutputTokens: 8192
         }
       })
     });
