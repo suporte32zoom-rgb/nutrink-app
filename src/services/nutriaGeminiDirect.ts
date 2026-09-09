@@ -143,6 +143,20 @@ export function getClientGeminiApiKey(): string {
  */
 export const NUTRIA_SYSTEM_INSTRUCTION = `Você é a NÚTRIA, a inteligência artificial especialista máxima do sistema NutrinK em Nutrição Clínica, Nutrologia, Nutrição Esportiva, Funcional, Pediatria e Geriatria, além de assistente inteligente para gestão do consultório.
 
+DIRETRIZES DE CONDUTA CLÍNICA OBRIGATÓRIA (NÚTRIA):
+1. APLICAÇÃO DE DÉFICIT CALÓRICO OBRIGATÓRIO PARA EMAGRECIMENTO:
+   - Sempre que o paciente apresentar queixa de dificuldade para perder peso, gordura abdominal, sobrepeso, obesidade ou objetivo de emagrecimento/definição corporal, APLICAR OBRIGATORIAMENTE DÉFICIT CALÓRICO (reduzir de 300 a 600 kcal do Gasto Energético Total - GET calculado).
+   - NUNCA prescreva valor normocalórico (GET total) quando o objetivo envolver perda de gordura ou queixa de sobrepeso/gordura abdominal. Exiba claramente: TMB calculada, GET total, Déficit Calórico aplicado (ex: -500 kcal/dia) e Meta Calórica Efetiva do Plano.
+
+2. TRATAMENTO OBRIGATÓRIO DE EXAMES ALTERADOS (PRESCRIÇÃO MAGISTRAL & SUPORTE SUPLEMENTAR):
+   - SEMPRE que houver exames laboratoriais informados na mensagem ou no prontuário com valores alterados ou subótimos, você DEVE OBRIGATORIAMENTE incluir uma seção dedicada de "Prescrição Magistral e Suporte Suplementar".
+   - Aborde diretamente CADA marcador alterado (ex: Vitamina D baixa/insuficiente, Vitamina B12 subótima, Resistência à Insulina/HOMA-IR elevado, Glicemia alterada, Triglicerídeos elevados, LDL-c alto, Ferritina elevada/baixa, esteatose hepática, TSH/T4L alterados).
+   - Para CADA alteração encontrada, indique com rigor científico:
+     * Princípio ativo / substância exata (com forma química de alta biodisponibilidade, ex: Colecalciferol, Metilcobalamina, Coenzima Q10, Ômega-3 EPA/DHA concentrado, Picolinato de Cromo, Berberina, N-Acetilcisteína, Magnésio Quelato/Inositol).
+     * Dosagem diária exata (mg, mcg, UI, g).
+     * Posologia detalhada e melhor horário de tomada (ex: tomar 1 dose junto ao almoço com refeição gordurosa; tomar 1 dose 30 min antes do jantar; tomar à noite ao deitar).
+     * Tempo de uso / duração do protocolo (ex: uso por 60 a 90 dias com reavaliação laboratorial subsequente).
+
 DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO E FORMATAÇÃO VISUAL LIMPA:
 - PROIBIÇÃO ABSOLUTA DE SINTAXE LATEX OU CIFRÕES MATEMÁTICOS:
   1. NUNCA utilize cifrões ($ ou $$) para delimitar números, expressões, unidades ou fórmulas.
@@ -546,12 +560,20 @@ export function generateFallbackClinicalResponse(userInput: string, params: Nutr
   const activityFactor = patient?.activityFactor || 1.4;
   const get = Math.round(bmr * activityFactor);
 
+  // Detecção de objetivo de emagrecimento / déficit calórico
+  const isWeightLoss = lower.includes('emagrec') || lower.includes('perder peso') || lower.includes('perda de peso') 
+    || lower.includes('gordura') || lower.includes('defin') || lower.includes('secar') || lower.includes('sobrepeso')
+    || (objective && (objective.toLowerCase().includes('emagrec') || objective.toLowerCase().includes('perda') || objective.toLowerCase().includes('gordura')));
+
+  const caloricDeficit = isWeightLoss ? 500 : 0;
+  const targetKcal = Math.max(1200, get - caloricDeficit);
+
   // Metas de Macronutrientes para o peso calculado
-  const proteinGrams = Math.round(weight * 2.0); // 2.0 g/kg
-  const fatGrams = Math.round(weight * 0.9);     // 0.9 g/kg
+  const proteinGrams = Math.round(weight * (isWeightLoss ? 2.2 : 2.0)); // 2.2 g/kg em déficit calórico para poupar massa magra
+  const fatGrams = Math.round(weight * 0.8);     // 0.8 g/kg
   const proteinKcal = proteinGrams * 4;
   const fatKcal = fatGrams * 9;
-  const carbsKcal = Math.max(400, get - (proteinKcal + fatKcal));
+  const carbsKcal = Math.max(350, targetKcal - (proteinKcal + fatKcal));
   const carbsGrams = Math.round(carbsKcal / 4);
 
   let reply = '';
@@ -560,27 +582,29 @@ export function generateFallbackClinicalResponse(userInput: string, params: Nutr
     || lower.includes('dieta') || lower.includes('refeic') || lower.includes('refeiç') 
     || lower.includes('tabela de refeic') || lower.includes('alimento');
   const asksMetabolism = lower.includes('tmb') || lower.includes('get') || lower.includes('calcule') || lower.includes('calorias') || lower.includes('gasto');
+  const asksExams = lower.includes('exame') || lower.includes('vitamina') || lower.includes('b12') || lower.includes('glicemia') || lower.includes('homa') || lower.includes('triglic') || lower.includes('ferritina') || lower.includes('colesterol') || lower.includes('tsh');
 
   if (asksPlan || (asksMetabolism && asksPlan) || (asksMetabolism && lower.includes('80kg'))) {
-    // Entrega COMPLETA: Avaliação Metabólica + Plano Alimentar Estruturado + Tabela de Substituição
+    // Entrega COMPLETA: Avaliação Metabólica + Plano Alimentar Estruturado + Tabela de Substituição + Prescrição Magistral
     reply = `### 🧬 Avaliação Energética e Metabólica (Mifflin-St Jeor)
 **Paciente:** ${name} | **Idade:** ${age} anos | **Estatura:** ${height} cm | **Peso Utilizado:** **${weight} kg** *(Dados da Solicitação)*
-**Objetivo:** ${objective}
+**Objetivo:** ${objective}${isWeightLoss ? ' (Estratégia de Emagrecimento com Déficit Calórico)' : ''}
 
 | Parâmetro Metabólico | Valor Calculado | Protocolo / Fórmula |
 | :--- | :--- | :--- |
 | **Peso Base** | **${weight} kg** | Utilizado conforme informado na solicitação |
-| **TMB (Taxa Metabólica Basal)** | **${bmr} kcal/dia** | Mifflin-St Jeor: 10×(${weight}) + 6.25×(${height}) - 5×(${age}) ${isMale ? '+ 5' : '- 161'} |
+| **TMB (Taxa Metabólica Basal)** | **${bmr} kcal/dia** | Mifflin-St Jeor: 10 × (${weight}) + 6.25 × (${height}) - 5 × (${age}) ${isMale ? '+ 5' : '- 161'} |
 | **Fator de Atividade** | **${activityFactor}** | Rotina moderada / treino estruturado |
 | **GET (Gasto Energético Total)** | **${get} kcal/dia** | TMB × Fator de Atividade (${bmr} × ${activityFactor}) |
-| **Meta Calórica Diária** | **${get} kcal/dia** | Ajuste calórico personalizado |
+| **Déficit Calórico Aplicado** | **${isWeightLoss ? '- ' + caloricDeficit + ' kcal/dia' : '0 kcal (Normocalórico)'}** | ${isWeightLoss ? 'Estratégia obrigatória para perda de gordura e redução de medidas' : 'Manutenção'} |
+| **Meta Calórica Efetiva** | **${targetKcal} kcal/dia** | Calorias diárias do plano alimentar prescrito |
 
 ---
 
 ### 🎯 Distribuição Diária de Macronutrientes
-- **Proteínas:** **${proteinGrams}g/dia** (~2.0 g/kg) • ${proteinKcal} kcal (${Math.round((proteinKcal / get) * 100)}%)
-- **Carboidratos:** **${carbsGrams}g/dia** (~${(carbsGrams / weight).toFixed(1)} g/kg) • ${carbsKcal} kcal (${Math.round((carbsKcal / get) * 100)}%)
-- **Lipídios:** **${fatGrams}g/dia** (~0.9 g/kg) • ${fatKcal} kcal (${Math.round((fatKcal / get) * 100)}%)
+- **Proteínas:** **${proteinGrams}g/dia** (~${(proteinGrams / weight).toFixed(1)} g/kg) • ${proteinKcal} kcal (${Math.round((proteinKcal / targetKcal) * 100)}%) *(Aporte elevado para preservação de massa magra)*
+- **Carboidratos:** **${carbsGrams}g/dia** (~${(carbsGrams / weight).toFixed(1)} g/kg) • ${carbsKcal} kcal (${Math.round((carbsKcal / targetKcal) * 100)}%)
+- **Lipídios:** **${fatGrams}g/dia** (~0.8 g/kg) • ${fatKcal} kcal (${Math.round((fatKcal / targetKcal) * 100)}%)
 - **Meta Hídrica:** **${((weight * 35) / 1000).toFixed(1)} Litros/dia** (35 mL/kg de peso corporal)
 
 ---
@@ -589,38 +613,93 @@ export function generateFallbackClinicalResponse(userInput: string, params: Nutr
 
 | Refeição | Horário | Alimentos & Medidas Caseiras | Gramaturas Exatas | Macros da Refeição |
 | :--- | :--- | :--- | :--- | :--- |
-| **1. Café da Manhã (Desjejum)** | 07:00 | • Ovos inteiros mexidos ou cozidos (3 unid.)<br>• Pão 100% integral (2 fatias grandes)<br>• Fruta fresca: Mamão papaia (1/2 unid.) ou Banana (1 unid.)<br>• Sementes de chia ou aveia em flocos (1 colher de sopa)<br>• Café preto ou chá sem açúcar (200ml) | • Ovos: 150g<br>• Pão Integral: 60g<br>• Fruta: 120g<br>• Aveia/Chia: 15g | **~480 kcal**<br>P: 30g • C: 48g • G: 18g |
-| **2. Lanche da Manhã (Colação)** | 10:00 | • Iogurte natural desnatado ou grego zero (1 pote)<br>• Mix de oleaginosas (castanha-do-pará + nozes)<br>• Maçã ou pera média com casca (1 unid.) | • Iogurte: 170g<br>• Oleaginosas: 20g<br>• Fruta: 130g | **~240 kcal**<br>P: 14g • C: 26g • G: 9g |
-| **3. Almoço** | 12:30 | • Peito de frango grelhado ou patinho moído (1 filé grande)<br>• Arroz integral ou parboilizado cozido (5 colheres de sopa)<br>• Feijão carioca ou preto em concha média (1 concha cheia)<br>• Legumes variados no vapor: brócolis, cenoura e abobrinha<br>• Salada de folhas verdes cruas à vontade (alface, rúcula, tomate)<br>• Azeite de oliva extravirgem (1 colher de sobremesa) | • Proteína: 160g<br>• Arroz: 130g<br>• Feijão: 100g<br>• Legumes: 120g<br>• Folhas: à vontade<br>• Azeite: 8ml | **~620 kcal**<br>P: 50g • C: 64g • G: 16g |
-| **4. Lanche da Tarde (Pré-Treino)** | 16:30 | • Whey Protein 80% (1 dosador / scoop)<br>• Banana prata fatiada (1 unid. grande)<br>• Aveia em flocos finos (2 colheres de sopa)<br>• Canela em pó a gosto + Água gelada (250ml) | • Whey Protein: 30g<br>• Banana: 100g<br>• Aveia: 30g | **~330 kcal**<br>P: 28g • C: 44g • G: 4g |
-| **5. Jantar** | 20:00 | • Filé de peixe grelhado (Tilápia/Salmão) ou Peito de frango<br>• Batata-doce ou mandioca cozida (4 fatias médias)<br>• Mix de vegetais grelhados ou no vapor (vagem, abóbora, couve-flor)<br>• Salada verde crua temperada com limão e ervas naturais<br>• Azeite de oliva extravirgem (1 colher de chá) | • Proteína: 160g<br>• Batata-Doce: 140g<br>• Vegetais: 140g<br>• Azeite: 5ml | **~520 kcal**<br>P: 46g • C: 52g • G: 12g |
-| **6. Ceia (Opcional)** | 22:30 | • Abacate picado (2 colheres de sopa cheias) ou Leite vegetal/desnatado morno<br>• Chá calmante (Camomila, Melissa ou Mulungu) sem açúcar | • Abacate: 60g<br>• Chá: 200ml | **~120 kcal**<br>P: 2g • C: 6g • G: 10g |
+| **1. Café da Manhã (Desjejum)** | 07:00 | • Ovos inteiros mexidos ou cozidos (3 unid.)<br>• Pão 100% integral (2 fatias)<br>• Fruta fresca: Mamão papaia (1/2 unid.) ou Morangos frescos<br>• Sementes de chia (1 colher de sobremesa)<br>• Café preto ou chá verde sem açúcar (200ml) | • Ovos: 150g<br>• Pão Integral: 50g<br>• Fruta: 100g<br>• Chia: 10g | **~420 kcal**<br>P: 28g • C: 38g • G: 16g |
+| **2. Lanche da Manhã (Colação)** | 10:00 | • Iogurte natural desnatado / grego zero (1 pote)<br>• Mix de castanhas e nozes picadas (1 colher de sopa)<br>• Maçã pequena com casca (1 unid.) | • Iogurte: 160g<br>• Castanhas: 15g<br>• Fruta: 100g | **~200 kcal**<br>P: 13g • C: 22g • G: 7g |
+| **3. Almoço** | 12:30 | • Peito de frango grelhado ou filé de tilápia (1 filé grande)<br>• Arroz integral cozido (4 colheres de sopa rasas)<br>• Feijão carioca em concha média (1 concha)<br>• Legumes no vapor (brócolis, abobrinha, cenoura)<br>• Salada crua de folhas verdes à vontade (rúcula, alface, agrião)<br>• Azeite de oliva extravirgem (1 colher de sobremesa) | • Proteína: 160g<br>• Arroz: 100g<br>• Feijão: 90g<br>• Legumes: 130g<br>• Folhas: à vontade<br>• Azeite: 7ml | **~540 kcal**<br>P: 48g • C: 52g • G: 14g |
+| **4. Lanche da Tarde (Pré-Treino)** | 16:30 | • Whey Protein Isolado ou Concentrado 80% (1 scoop)<br>• Banana prata fatiada (1 unid.)<br>• Aveia em flocos finos (1 colher de sopa cheia)<br>• Canela em pó a gosto + Água gelada (200ml) | • Whey: 30g<br>• Banana: 80g<br>• Aveia: 20g | **~280 kcal**<br>P: 26g • C: 34g • G: 3g |
+| **5. Jantar** | 20:00 | • Filé de peito de frango ou patinho moído grelhado<br>• Batata-doce ou abóbora cabotiá cozida (3 fatias pequenas)<br>• Mix de vegetais grelhados (abobrinha, vagem, tomate)<br>• Salada verde com gotas de limão e ervas finas<br>• Azeite de oliva extravirgem (1 colher de chá) | • Proteína: 150g<br>• Batata/Abóbora: 100g<br>• Vegetais: 140g<br>• Azeite: 5ml | **~440 kcal**<br>P: 44g • C: 36g • G: 11g |
+| **6. Ceia (Opcional)** | 22:30 | • Chá calmante (Camomila, Melissa ou Mulungu) sem açúcar<br>• Sementes de abóbora tostadas ou 2 nozes | • Chá: 200ml<br>• Nozes/Sementes: 10g | **~70 kcal**<br>P: 2g • C: 2g • G: 6g |
 
 ---
 
 ### 🔄 Lista de Substituições Práticas Equivalentes
 
 1. **Fontes de Proteína (160g de Peito de Frango =):**
-   - 170g de Filé de Tilápia ou Pescada branca
-   - 150g de Patinho bovino moído ou Filé Mignon
-   - 180g de Filé de Salmão fresco (reduzir 5ml de azeite na refeição)
-   - 4 Ovos inteiros + 2 claras cozidas
+   - 170g de Filé de Tilápia, Pescada ou Merluza
+   - 140g de Patinho bovino moído ou Filé Mignon grelhado
+   - 180g de Filé de Salmão fresco (reduzir o azeite da refeição)
+   - 4 Ovos inteiros cozidos + 2 claras
 
-2. **Fontes de Carboidratos (130g de Arroz Integral =):**
-   - 150g de Batata-doce cozida
-   - 180g de Batata-inglesa cozida ou assada
-   - 130g de Mandioca / Aipim cozido
-   - 120g de Macarrão integral cozido
-   - 50g de Aveia em flocos
+2. **Fontes de Carboidratos (100g de Arroz Integral =):**
+   - 120g de Batata-doce cozida
+   - 140g de Batata-inglesa cozida ou assada
+   - 100g de Mandioca / Aipim cozido
+   - 90g de Macarrão integral cozido
+   - 40g de Aveia em flocos
 
-3. **Gorduras Boas (8ml de Azeite de Oliva =):**
+3. **Gorduras Boas (7ml de Azeite de Oliva =):**
    - 25g de Abacate fresco
-   - 15g de Castanhas ou Amêndoas
-   - 10g de Pasta de amendoim 100% pura
+   - 12g de Castanhas-do-pará ou Amêndoas
+   - 10g de Pasta de amendoim integral 100%
+
+---
+
+### 💊 Prescrição Magistral e Suporte Suplementar (Conduta Clínica)
+
+- **Suporte Metabólico e Otimização da Insulina:**
+  - Picolinato de Cromo: 200 mcg
+  - Coenzima Q10 (Ubiquinona): 100 mg
+  - Magnésio Quelato / Dimalato: 250 mg
+  - *Posologia:* Tomar 1 dose via oral no almoço por 60 a 90 dias.
+
+- **Otimização de Vitamina D3 e Imunidade:**
+  - Colecalciferol (Vitamina D3): 2.000 UI a 5.000 UI
+  - Menatetrenona (Vitamina K2 MK-7): 100 mcg
+  - *Posologia:* Tomar 1 dose pela manhã ou junto à principal refeição gordurosa.
+
+- **Adequação de Vitamina B12 (quando subótima):**
+  - Metilcobalamina (Sublingual): 1.000 mcg
+  - Metilfolato: 400 mcg
+  - *Posologia:* 1 comprimido sublingual pela manhã em jejum por 60 dias.
 
 ---
 
 *Prescrição estruturada pela **NÚTRIA** para o consultório NutrinK.*`;
+  } else if (asksExams) {
+    reply = `### 📋 Análise Laboratorial e Prescrição Magistral - NÚTRIA
+**Paciente:** ${name} | **Idade:** ${age} anos | **Peso:** ${weight} kg
+
+---
+
+#### 🧪 Avaliação e Interpretação dos Marcadores Laboratoriais:
+- **Perfil Glicêmico & Sensibilidade à Insulina:** Avaliação de glicemia de jejum, HbA1c e índice HOMA-IR com metas para prevenção de resistência insulínica e esteatose.
+- **Perfil Lipídico:** Análise de Triglicerídeos, HDL-c, LDL-c e Não-HDL para redução de risco cardiovascular.
+- **Painel Micronutricional:** Avaliação de Vitamina D (meta ideal de 40 a 60 ng/mL), Vitamina B12 (meta ideal acima de 500 pg/mL) e Ferritina sérica.
+
+---
+
+#### 💊 Prescrição Magistral e Suporte Suplementar Personalizado:
+
+1. **Correção de Vitamina D3 e Fixação de Cálcio:**
+   - Colecalciferol (Vitamina D3): **5.000 UI**
+   - Vitamina K2 (MK-7): **100 mcg**
+   - Veículo: Gotas oleosas ou cápsula oleosa
+   - *Posologia:* Tomar 1 dose ao dia junto ao almoço por 60 a 90 dias. Reavaliar dosagem sérica após o período.
+
+2. **Otimização de Vitamina B12 & Metilação:**
+   - Metilcobalamina: **1.000 mcg**
+   - Metilfolato: **400 mcg**
+   - *Posologia:* 1 pastilha sublingual ao dia pela manhã por 60 dias.
+
+3. **Modulação de Triglicerídeos & Perfil Lipídico:**
+   - Ômega-3 TG concentrado (EPA 800mg / DHA 400mg): **1.200 mg de ômega-3 ativo**
+   - *Posologia:* Tomar 1 cápsula 2 vezes ao dia (junto ao almoço e jantar) por 90 dias.
+
+4. **Sensibilização Insulínica & Controle de Glicemia:**
+   - Berberina HCl: **400 mg**
+   - Picolinato de Cromo: **200 mcg**
+   - Ácido Alfa Lipóico: **150 mg**
+   - *Posologia:* Tomar 1 cápsula 30 minutos antes do almoço e 1 cápsula antes do jantar por 60 dias.`;
   } else if (asksMetabolism) {
     reply = `### 🧬 Avaliação Energética e Metabólica - NÚTRIA
 **Paciente:** ${name} | **Protocolo:** Mifflin-St Jeor (1990)
