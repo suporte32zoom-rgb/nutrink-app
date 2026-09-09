@@ -56,50 +56,6 @@ export function getGoogleClientId(): string {
 }
 
 /**
- * Returns current login URI for redirect mode
- */
-export function getGoogleLoginUri(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return 'https://nutrink.com.br';
-}
-
-/**
- * Extracts and parses Google credential or token from URL Query, Hash or Cookie params
- */
-export function extractGoogleCredentialFromUrl(): GoogleProfile | null {
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-
-    const credential = urlParams.get('credential') || hashParams.get('credential') || urlParams.get('id_token') || hashParams.get('id_token');
-    if (credential) {
-      const profile = parseGoogleJwt(credential);
-      if (profile) {
-        // Clean URL to remove sensitive token from address bar without reloading
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-        return profile;
-      }
-    }
-
-    const error = urlParams.get('error') || hashParams.get('error');
-    if (error) {
-      console.warn('Google OAuth retornou erro na URL:', error);
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-    }
-  } catch (e) {
-    console.error('Erro ao verificar parâmetros de autenticação Google na URL:', e);
-  }
-
-  return null;
-}
-
-/**
  * Parses JWT ID Token issued by Google Accounts
  */
 export function parseGoogleJwt(token: string): GoogleProfile | null {

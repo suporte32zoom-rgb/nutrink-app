@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { getGoogleClientId, getGoogleLoginUri, parseGoogleJwt, GoogleProfile, loadGoogleGsiScript } from '../services/googleAuth';
+import { getGoogleClientId, parseGoogleJwt, GoogleProfile, loadGoogleGsiScript } from '../services/googleAuth';
 
 interface GoogleLoginButtonProps {
   onSuccess: (profile: GoogleProfile) => void;
@@ -10,7 +10,6 @@ interface GoogleLoginButtonProps {
   width?: string;
   shape?: 'rectangular' | 'pill' | 'circle' | 'square';
   className?: string;
-  uxMode?: 'redirect' | 'popup';
 }
 
 export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
@@ -21,8 +20,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
   size = 'large',
   width = '100%',
   shape = 'rectangular',
-  className = '',
-  uxMode = 'redirect'
+  className = ''
 }) => {
   const buttonRef = useRef<HTMLDivElement>(null);
 
@@ -35,23 +33,11 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       if (!isMounted || !window.google?.accounts?.id || !buttonRef.current) return;
 
       const clientId = getGoogleClientId();
-      const loginUri = getGoogleLoginUri();
 
       try {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const effectiveUxMode = uxMode === 'redirect' || isMobile ? 'redirect' : 'popup';
-
-        const initConfig: any = {
+        window.google.accounts.id.initialize({
           client_id: clientId,
-          ux_mode: effectiveUxMode,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        };
-
-        if (effectiveUxMode === 'redirect') {
-          initConfig.login_uri = loginUri;
-        } else {
-          initConfig.callback = (response: { credential?: string; select_by?: string }) => {
+          callback: (response: { credential?: string; select_by?: string }) => {
             if (response.credential) {
               const profile = parseGoogleJwt(response.credential);
               if (profile) {
@@ -62,10 +48,10 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
             } else if (onError) {
               onError('Nenhuma credencial retornada pelo Google.');
             }
-          };
-        }
-
-        window.google.accounts.id.initialize(initConfig);
+          },
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
 
         // Clear container before re-rendering
         if (buttonRef.current) {
@@ -91,7 +77,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [onSuccess, onError, text, theme, size, width, shape, uxMode]);
+  }, [onSuccess, onError, text, theme, size, width, shape]);
 
   return (
     <div className={`google-login-container w-full flex justify-center ${className}`}>
@@ -101,4 +87,3 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
 };
 
 export default GoogleLoginButton;
-

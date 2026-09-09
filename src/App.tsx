@@ -35,7 +35,6 @@ import {
 } from './types';
 import { safeFetchJson } from './utils/api';
 import { callNutriaDirect } from './services/nutriaGeminiDirect';
-import { extractGoogleCredentialFromUrl, parseGoogleJwt, GoogleProfile } from './services/googleAuth';
 import { Bot, Sparkles, MessageSquare, X } from 'lucide-react';
 
 export function App() {
@@ -246,57 +245,6 @@ Seu consultório foi inicializado com sucesso (${newUser.crn} • ${newUser.spec
     setAuthModalTab('login'); // strictly asks to enter email and password from original registration
     setIsLoginModalOpen(true);
   };
-
-  // Google OAuth Redirect Handler (detects returned credential from Google redirect in URL query/hash)
-  useEffect(() => {
-    const profile = extractGoogleCredentialFromUrl();
-    if (profile && profile.email) {
-      const email = profile.email.trim().toLowerCase();
-      const name = profile.name || 'Profissional de Saúde';
-      const picture = profile.picture || '';
-
-      let registeredUsers: any[] = [];
-      try {
-        const raw = localStorage.getItem('nutrink_registered_users');
-        if (raw) registeredUsers = JSON.parse(raw);
-      } catch {}
-
-      const existing = registeredUsers.find((u: any) => u.email?.trim().toLowerCase() === email);
-
-      let targetUser: UserAccount;
-      if (existing) {
-        targetUser = {
-          ...existing,
-          name: existing.name || name,
-          avatarUrl: picture || existing.avatarUrl,
-          authProvider: 'google',
-          googleId: profile.sub || profile.id || existing.googleId
-        };
-      } else {
-        targetUser = {
-          id: `usr-g-${Date.now()}`,
-          name: name,
-          email: email,
-          crn: 'CRN Ativo',
-          specialty: 'Nutrição Clínica & Funcional',
-          plan: 'free',
-          isSubscribed: false,
-          dailyMessageCount: 0,
-          dailyMessageLimit: 30,
-          monthlyMessageCount: 0,
-          monthlyMessageLimit: 50,
-          activeSince: '2026',
-          avatarUrl: picture || undefined,
-          authProvider: 'google',
-          googleId: profile.sub || profile.id
-        };
-        registeredUsers.push(targetUser);
-        localStorage.setItem('nutrink_registered_users', JSON.stringify(registeredUsers));
-      }
-
-      handleLoginAs(targetUser);
-    }
-  }, []);
 
   // Real-time backend subscription sync (via Mercado Pago Webhook)
   useEffect(() => {

@@ -31,22 +31,6 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Google Identity Services (GIS) Redirect Callback Route (handles HTTP POST from Google login_uri redirect)
-app.post(["/", "/auth/google/callback", "/auth/google/callback/"], (req: Request, res: Response) => {
-  const credential = req.body?.credential || req.body?.id_token || "";
-  const gCsrfToken = req.body?.g_csrf_token || "";
-  
-  if (credential) {
-    // Redirect browser back to home page with credential in URL hash/query so the React app instantly picks it up
-    res.redirect(`/#credential=${encodeURIComponent(credential)}`);
-    return;
-  }
-  
-  // If no credential found in body, redirect to home
-  res.redirect("/");
-});
 
 // Healthcheck & Hostinger Runtime Diagnosis Endpoint
 app.get("/api/health", (req, res) => {
