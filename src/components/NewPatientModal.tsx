@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, UserPlus, Flame, Scale, Activity, Droplets } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, UserPlus, Flame, Scale, Activity, Droplets, ShieldCheck, User } from 'lucide-react';
 import { Patient, Gender, Objective } from '../types';
 import { 
   normalizeHeightToCm, 
@@ -21,10 +21,17 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
   onClose,
   onSavePatient
 }) => {
-  // Campos de entrada iniciam vazios/zerados, aguardando preenchimento real
+  const modalRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+
+  // Campos de identificação pessoal
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+
+  // Parâmetros antropométricos e metabólicos
   const [gender, setGender] = useState<Gender>('masculino');
   const [age, setAge] = useState<string>('');
   const [height, setHeight] = useState<string>(''); // Suporta cm (ex: 175) ou m (ex: 1.75)
@@ -33,9 +40,41 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
   const [bodyFatPercentage, setBodyFatPercentage] = useState<string>('');
   const [objective, setObjective] = useState<Objective>('emagrecimento');
   const [activityFactor, setActivityFactor] = useState<string>('1.2');
+
+  // Anamnese inicial
   const [clinicalHistory, setClinicalHistory] = useState('');
   const [allergies, setAllergies] = useState('');
   const [medications, setMedications] = useState('');
+
+  // Forçar scroll no topo assim que o modal for aberto
+  useEffect(() => {
+    if (isOpen) {
+      if (modalRef.current) {
+        modalRef.current.scrollTop = 0;
+      }
+      if (backdropRef.current) {
+        backdropRef.current.scrollTop = 0;
+      }
+    }
+  }, [isOpen]);
+
+  // Cálculo automático de idade caso a data de nascimento seja preenchida
+  const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setBirthDate(val);
+    if (val) {
+      const birth = new Date(val);
+      const today = new Date();
+      let calculatedAge = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        calculatedAge--;
+      }
+      if (calculatedAge > 0 && calculatedAge < 125) {
+        setAge(String(calculatedAge));
+      }
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -64,10 +103,11 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
     const newPatient: Patient = {
       id: `pat-${Date.now()}`,
       name: name.trim(),
+      cpf: cpf.trim() || undefined,
       email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '')}@email.com`,
       phone: phone.trim() || '(11) 99999-0000',
       gender,
-      birthDate: '1998-05-10',
+      birthDate: birthDate || '1998-05-10',
       age: numAge,
       heightCm,
       initialWeightKg: numWeight,
@@ -82,9 +122,9 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
       status: 'ativo',
       tags: [objective],
       anamnese: {
-        clinicalHistory: clinicalHistory || 'Nenhum histórico informado no cadastro inicial.',
+        clinicalHistory: clinicalHistory || 'Nenhum histórico patológico relatado no cadastro inicial.',
         foodAllergiesAndIntolerances: allergies || 'Nenhuma alergia relatada.',
-        currentMedicationsAndSupplements: medications || 'Nenhum medicamento.',
+        currentMedicationsAndSupplements: medications || 'Nenhum medicamento informado.',
         routineAndOccupation: 'Rotina informada em consulta.',
         sleepHoursPerNight: 7,
         waterIntakeLiters: waterData.liters,
@@ -111,82 +151,129 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0c0217]/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#150328] border border-purple-800/60 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8 shadow-fuchsia-950/40">
+    <div 
+      ref={backdropRef}
+      className="fixed inset-0 z-50 bg-[#0c0217]/85 backdrop-blur-sm flex items-start justify-center p-3 sm:p-4 overflow-y-auto"
+      id="modal-new-patient-backdrop"
+    >
+      <div 
+        ref={modalRef}
+        style={{ maxHeight: '90vh', overflowY: 'auto', paddingTop: '2rem' }}
+        className="bg-[#150328] border border-purple-800/60 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 my-4 sm:my-8 shadow-fuchsia-950/40 relative"
+        id="modal-new-patient-container"
+      >
         
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-purple-900/40 pb-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-fuchsia-600 to-purple-600 flex items-center justify-center text-white font-black shadow-md shadow-fuchsia-950/50">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-fuchsia-600 via-purple-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-md shadow-fuchsia-950/50 border border-fuchsia-400/40">
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-white text-base">Cadastrar Novo Paciente</h3>
+              <h3 className="font-black text-white text-base sm:text-lg">Cadastrar Novo Paciente</h3>
               <p className="text-xs text-purple-200">Prontuário com cálculo antropométrico e metabólico em tempo real</p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="text-purple-300 hover:text-white p-1.5 rounded-xl hover:bg-[#250847] transition-all"
+            id="btn-close-new-patient-modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="space-y-5 text-xs">
           
-          {/* Identificação */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="sm:col-span-2">
-              <label className="text-purple-200 font-bold">Nome Completo do Paciente *</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="ex: Marcela Albuquerque"
-                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-300/50 font-medium"
-              />
+          {/* SEÇÃO 1: DADOS PESSOAIS & IDENTIFICAÇÃO (NO TOPO) */}
+          <div className="p-4 bg-[#1a0533] border border-purple-800/40 rounded-2xl space-y-3" id="section-dados-pessoais">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] uppercase font-black text-fuchsia-300 tracking-wider flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-fuchsia-400" />
+                1. Dados Pessoais & Identificação
+              </span>
+              <span className="text-[10px] text-purple-300 font-medium">Campos com (*) são obrigatórios</span>
             </div>
 
-            <div>
-              <label className="text-purple-200 font-bold">E-mail</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="paciente@email.com"
-                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-300/50"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className="text-purple-200 font-bold block mb-1">Nome Completo do Paciente *</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="ex: Marcela Albuquerque"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40 font-semibold"
+                  id="input-new-patient-name"
+                />
+              </div>
 
-            <div>
-              <label className="text-purple-200 font-bold">WhatsApp / Telefone</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(11) 98765-4321"
-                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-300/50"
-              />
+              <div>
+                <label className="text-purple-200 font-bold block mb-1">CPF do Paciente</label>
+                <input
+                  type="text"
+                  value={cpf}
+                  onChange={(e) => setCpf(e.target.value)}
+                  placeholder="000.000.000-00"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40 font-medium"
+                  id="input-new-patient-cpf"
+                />
+              </div>
+
+              <div>
+                <label className="text-purple-200 font-bold block mb-1">Data de Nascimento</label>
+                <input
+                  type="date"
+                  value={birthDate}
+                  onChange={handleBirthDateChange}
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 font-medium"
+                  id="input-new-patient-birthdate"
+                />
+              </div>
+
+              <div>
+                <label className="text-purple-200 font-bold block mb-1">WhatsApp / Telefone *</label>
+                <input
+                  type="text"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(11) 98765-4321"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40 font-medium"
+                  id="input-new-patient-phone"
+                />
+              </div>
+
+              <div>
+                <label className="text-purple-200 font-bold block mb-1">E-mail do Paciente</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="paciente@email.com"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40 font-medium"
+                  id="input-new-patient-email"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Parâmetros Antropométricos (Campos Zerados/Vazios) */}
-          <div className="p-4 bg-[#1a0533] border border-purple-800/40 rounded-2xl space-y-3">
+          {/* SEÇÃO 2: PARÂMETROS FÍSICOS & ANTROPOMÉTRICOS */}
+          <div className="p-4 bg-[#1a0533] border border-purple-800/40 rounded-2xl space-y-3" id="section-parametros-fisicos">
             <span className="text-[11px] uppercase font-black text-fuchsia-300 tracking-wider flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5" />
-              Parâmetros Físicos & Antropométricos
+              <Activity className="w-3.5 h-3.5 text-fuchsia-400" />
+              2. Parâmetros Físicos & Antropométricos
             </span>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label className="text-purple-200 font-bold">Gênero Biológico *</label>
+                <label className="text-purple-200 font-bold block mb-1">Gênero Biológico *</label>
                 <select
                   value={gender}
                   onChange={(e) => setGender(e.target.value as Gender)}
-                  className="w-full mt-1 bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-semibold focus:outline-none focus:border-fuchsia-400"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-semibold focus:outline-none focus:border-fuchsia-400"
                 >
                   <option value="masculino">Masculino</option>
                   <option value="feminino">Feminino</option>
@@ -194,7 +281,7 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
               </div>
 
               <div>
-                <label className="text-purple-200 font-bold">Idade (anos) *</label>
+                <label className="text-purple-200 font-bold block mb-1">Idade (anos) *</label>
                 <input
                   type="number"
                   min="1"
@@ -202,73 +289,78 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
                   required
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
-                  placeholder="0"
-                  className="w-full mt-1 bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-bold focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
+                  placeholder="ex: 28"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-bold focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
+                  id="input-new-patient-age"
                 />
               </div>
 
               <div>
-                <label className="text-purple-200 font-bold">Altura (cm ou m) *</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-purple-200 font-bold">Altura *</label>
+                  {numHeight > 0 && (
+                    <span className="text-[10px] text-fuchsia-300 font-semibold">
+                      {heightCm} cm
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   required
                   value={height}
                   onChange={(e) => setHeight(e.target.value)}
                   placeholder="ex: 175 ou 1.75"
-                  className="w-full mt-1 bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-bold focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-bold focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
+                  id="input-new-patient-height"
                 />
-                {numHeight > 0 && (
-                  <span className="text-[10px] text-fuchsia-300 mt-0.5 block">
-                    {heightCm} cm • {heightM.toFixed(2)} m
-                  </span>
-                )}
               </div>
 
               <div>
-                <label className="text-purple-200 font-bold">Peso Atual (kg) *</label>
+                <label className="text-purple-200 font-bold block mb-1">Peso Atual (kg) *</label>
                 <input
                   type="number"
                   step="0.1"
                   required
                   value={currentWeightKg}
                   onChange={(e) => setCurrentWeightKg(e.target.value)}
-                  placeholder="0.0"
-                  className="w-full mt-1 bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-black text-fuchsia-300 focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
+                  placeholder="ex: 75.0"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-black text-fuchsia-300 focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
+                  id="input-new-patient-weight"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <div>
-                <label className="text-purple-200 font-bold">% Gordura Corporal</label>
+                <label className="text-purple-200 font-bold block mb-1">% Gordura Corporal</label>
                 <input
                   type="number"
                   step="0.1"
                   value={bodyFatPercentage}
                   onChange={(e) => setBodyFatPercentage(e.target.value)}
-                  placeholder="0.0 %"
-                  className="w-full mt-1 bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
+                  placeholder="ex: 15.0 %"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
                 />
               </div>
 
               <div>
-                <label className="text-purple-200 font-bold">Peso Meta (kg)</label>
+                <label className="text-purple-200 font-bold block mb-1">Meta de Peso (kg)</label>
                 <input
                   type="number"
                   step="0.1"
                   value={targetWeightKg}
                   onChange={(e) => setTargetWeightKg(e.target.value)}
-                  placeholder={numWeight > 0 ? `${numWeight} kg` : '0.0'}
-                  className="w-full mt-1 bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
+                  placeholder={numWeight > 0 ? `${numWeight} kg` : 'ex: 70.0'}
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white focus:outline-none focus:border-fuchsia-400 placeholder-purple-400/40"
                 />
               </div>
 
               <div>
-                <label className="text-purple-200 font-bold">Nível de Atividade (NAF)</label>
+                <label className="text-purple-200 font-bold block mb-1">Nível de Atividade (NAF)</label>
                 <select
                   value={activityFactor}
                   onChange={(e) => setActivityFactor(e.target.value)}
-                  className="w-full mt-1 bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-semibold focus:outline-none focus:border-fuchsia-400"
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white font-semibold focus:outline-none focus:border-fuchsia-400"
                 >
                   <option value="1.2">Sedentário (1.20)</option>
                   <option value="1.375">Levemente Ativo (1.375)</option>
@@ -349,45 +441,66 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
 
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-purple-200 font-bold">Objetivo Clínico</label>
-              <select
-                value={objective}
-                onChange={(e) => setObjective(e.target.value as Objective)}
-                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-white capitalize focus:outline-none focus:border-fuchsia-400"
-              >
-                <option value="emagrecimento">Emagrecimento</option>
-                <option value="hipertrofia">Hipertrofia Muscular</option>
-                <option value="performance_esportiva">Performance Esportiva</option>
-                <option value="manejo_diabetes">Manejo Diabetes / Glicemia</option>
-                <option value="saude_longevidade">Saúde & Longevidade</option>
-                <option value="vegetariano_vegano">Vegetariano / Vegano</option>
-                <option value="gestacao_lactacao">Gestação / Lactação</option>
-              </select>
-            </div>
+          {/* SEÇÃO 3: ANAMNESE & OBJETIVO CLÍNICO */}
+          <div className="p-4 bg-[#1a0533] border border-purple-800/40 rounded-2xl space-y-3" id="section-anamnese-inicial">
+            <span className="text-[11px] uppercase font-black text-fuchsia-300 tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-fuchsia-400" />
+              3. Anamnese & Objetivo Clínico
+            </span>
 
-            <div>
-              <label className="text-purple-200 font-bold">Histórico Clínico / Queixas Iniciais</label>
-              <input
-                type="text"
-                value={clinicalHistory}
-                onChange={(e) => setClinicalHistory(e.target.value)}
-                placeholder="Queixa principal, histórico..."
-                className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-white placeholder-purple-300/50 focus:outline-none focus:border-fuchsia-400"
-              />
-            </div>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-purple-200 font-bold block mb-1">Objetivo Nutricional / Clínico</label>
+                <select
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value as Objective)}
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white capitalize focus:outline-none focus:border-fuchsia-400"
+                >
+                  <option value="emagrecimento">Emagrecimento</option>
+                  <option value="hipertrofia">Hipertrofia Muscular</option>
+                  <option value="recomposicao_corporal">Recomposição Corporal</option>
+                  <option value="performance_esportiva">Performance Esportiva</option>
+                  <option value="manejo_diabetes">Manejo Diabetes / Glicemia</option>
+                  <option value="saude_longevidade">Saúde & Longevidade</option>
+                  <option value="saude_intestinal">Saúde Intestinal / FODMAPs</option>
+                  <option value="vegetariano_vegano">Vegetariano / Vegano</option>
+                  <option value="gestacao_lactacao">Gestação / Lactação</option>
+                </select>
+              </div>
 
-          <div>
-            <label className="text-purple-200 font-bold">Alergias ou Intolerâncias Alimentares</label>
-            <input
-              type="text"
-              value={allergies}
-              onChange={(e) => setAllergies(e.target.value)}
-              placeholder="ex: Intolerância à lactose, glúten..."
-              className="w-full mt-1 bg-[#1e073c] border border-purple-700/60 rounded-xl p-2.5 text-white placeholder-purple-300/50 focus:outline-none focus:border-fuchsia-400"
-            />
+              <div>
+                <label className="text-purple-200 font-bold block mb-1">Histórico Clínico / Queixas Iniciais</label>
+                <input
+                  type="text"
+                  value={clinicalHistory}
+                  onChange={(e) => setClinicalHistory(e.target.value)}
+                  placeholder="Queixa principal, patologias..."
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-purple-200 font-bold block mb-1">Alergias ou Intolerâncias Alimentares</label>
+                <input
+                  type="text"
+                  value={allergies}
+                  onChange={(e) => setAllergies(e.target.value)}
+                  placeholder="ex: Intolerância à lactose, glúten..."
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-purple-200 font-bold block mb-1">Medicamentos e Suplementos em Uso</label>
+                <input
+                  type="text"
+                  value={medications}
+                  onChange={(e) => setMedications(e.target.value)}
+                  placeholder="ex: Polivitamínico, Metformina..."
+                  className="w-full bg-[#120326] border border-purple-700/60 rounded-xl p-2.5 text-white placeholder-purple-400/40 focus:outline-none focus:border-fuchsia-400"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Action Footer */}
@@ -396,12 +509,14 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
               type="button"
               onClick={onClose}
               className="px-4 py-2 bg-[#220743] hover:bg-[#2f0b5a] text-purple-200 rounded-xl font-bold transition-all border border-purple-800/40"
+              id="btn-cancel-new-patient"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 text-white rounded-xl font-bold shadow-md shadow-fuchsia-950/60 flex items-center gap-1.5 border border-fuchsia-400/30 transition-all hover:scale-105"
+              className="px-5 py-2.5 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 text-white rounded-xl font-bold shadow-lg shadow-fuchsia-950/60 flex items-center gap-1.5 border border-fuchsia-400/40 transition-all hover:scale-105"
+              id="btn-submit-new-patient"
             >
               <UserPlus className="w-4 h-4" />
               <span>Cadastrar Paciente</span>
@@ -414,4 +529,3 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
     </div>
   );
 };
-
