@@ -141,6 +141,146 @@ const inMemoryPayments = new Map<string, {
   payerEmail: string;
 }>();
 
+// Google OAuth Configuration & Token Verification API
+app.get("/api/auth/google/config", (req: Request, res: Response) => {
+  const clientId = (process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "").trim();
+  res.json({
+    clientId: clientId || "389274819273-v738291nutrinkapp.apps.googleusercontent.com",
+    isConfigured: !!clientId,
+    scope: "openid email profile",
+  });
+});
+
+// OAuth Callback handler for Google Popup (postMessage protocol)
+app.get(["/auth/google/callback", "/auth/google/callback/"], (req: Request, res: Response) => {
+  res.send(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Autenticação NutrinK Google</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d0118;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+      padding: 20px;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(217, 70, 239, 0.2);
+      border-top-color: #d946ef;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h2 { font-size: 16px; margin: 0 0 8px; color: #f5d0fe; }
+    p { font-size: 13px; color: #a855f7; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <h2>Autenticação Google em andamento...</h2>
+  <p>Esta janela fechará automaticamente.</p>
+  <script>
+    (function() {
+      try {
+        var hash = window.location.hash.substring(1);
+        var params = new URLSearchParams(hash || window.location.search);
+        var accessToken = params.get('access_token');
+        var idToken = params.get('id_token');
+        var error = params.get('error') || params.get('error_description');
+
+        if (window.opener) {
+          if (error) {
+            window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: error }, '*');
+          } else if (accessToken || idToken) {
+            window.opener.postMessage({
+              type: 'GOOGLE_AUTH_SUCCESS',
+              accessToken: accessToken,
+              idToken: idToken
+            }, '*');
+          }
+          setTimeout(function() { window.close(); }, 500);
+        }
+      } catch(e) {
+        console.error('Callback error:', e);
+      }
+    })();
+  </script>
+</body>
+</html>`);
+});
+
+app.post("/api/auth/google/verify", async (req: Request, res: Response) => {
+  try {
+    const { idToken, accessToken } = req.body;
+    if (!idToken && !accessToken) {
+      res.status(400).json({ success: false, error: "Nenhum token fornecido" });
+      return;
+    }
+
+    if (idToken) {
+      try {
+        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+        if (response.ok) {
+          const payload = await response.json() as any;
+          res.json({
+            success: true,
+            user: {
+              googleId: payload.sub,
+              email: payload.email,
+              name: payload.name || `${payload.given_name || ''} ${payload.family_name || ''}`.trim() || 'Profissional de Saúde',
+              picture: payload.picture,
+              emailVerified: payload.email_verified === "true" || payload.email_verified === true
+            }
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("Falha ao validar idToken via Google tokeninfo:", err);
+      }
+    }
+
+    if (accessToken) {
+      try {
+        const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (response.ok) {
+          const payload = await response.json() as any;
+          res.json({
+            success: true,
+            user: {
+              googleId: payload.sub,
+              email: payload.email,
+              name: payload.name || `${payload.given_name || ''} ${payload.family_name || ''}`.trim() || 'Profissional de Saúde',
+              picture: payload.picture,
+              emailVerified: payload.email_verified === true
+            }
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("Falha ao validar accessToken via Google userinfo:", err);
+      }
+    }
+
+    res.status(400).json({ success: false, error: "Token do Google inválido ou expirado" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message || "Erro no servidor de autenticação" });
+  }
+});
+
+
 // Lazy initializer for Gemini client
 let genAIClient: GoogleGenAI | null = null;
 let currentGenAIApiKey = "";

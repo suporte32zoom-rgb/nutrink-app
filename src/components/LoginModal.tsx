@@ -18,10 +18,18 @@ import {
   Apple, 
   RefreshCw, 
   ArrowLeft,
-  Check
+  Check,
+  CheckCircle
 } from 'lucide-react';
 import { UserAccount } from '../types';
 import { formatBrasiliaShortDate } from '../utils/dateUtils';
+import { 
+  initiateGoogleOAuthPopup, 
+  loadGoogleGsiScript, 
+  getGoogleClientId, 
+  GoogleProfile 
+} from '../services/googleAuth';
+import GoogleLoginButton from './GoogleLoginButton';
 
 export type AuthModalTab = 'login' | 'register' | 'forgot_password' | 'google_onboarding';
 
@@ -122,6 +130,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [googleSpecialty, setGoogleSpecialty] = useState(SPECIALTY_OPTIONS[0]);
   const [googleCustomSpecialty, setGoogleCustomSpecialty] = useState('');
   const [googleAgreeTerms, setGoogleAgreeTerms] = useState(true);
+  const [googleAvatarUrl, setGoogleAvatarUrl] = useState<string>('');
+  const [googleVerifiedProfile, setGoogleVerifiedProfile] = useState<GoogleProfile | null>(null);
+  const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
 
   // Forgot password form state
   const [forgotEmail, setForgotEmail] = useState('');
@@ -133,6 +144,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Pre-load Google Identity Services SDK on mount
+  useEffect(() => {
+    loadGoogleGsiScript().catch((e) => console.warn('GSI Preload notice:', e));
+  }, []);
+
   // Synchronize initialTab if changed when opened and auto-prefill registered email
   useEffect(() => {
     if (isOpen) {
@@ -140,6 +156,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       setErrorMessage('');
       setAuthSuccess(false);
       setForgotSubmitted(false);
+      setIsGoogleLoading(false);
 
       // Auto-prefill last logged/registered email
       try {
@@ -313,14 +330,68 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }, 800);
   };
 
-  // Initiate Google Authentication Flow (Switches to mandatory onboarding step)
-  const handleInitiateGoogleAuth = () => {
-    setErrorMessage('');
-    setGoogleEmail(loginEmail || regEmail || 'profissional@gmail.com');
-    if (!googleName && regName) {
-      setGoogleName(regName);
+  // Handle verified Google Profile (from GIS button, OneTap, or OAuth Popup)
+  const handleGoogleSuccessProfile = (profile: GoogleProfile) => {
+    setIsGoogleLoading(false);
+    setGoogleVerifiedProfile(profile);
+
+    const email = (profile.email || '').trim().toLowerCase();
+    const name = (profile.name || 'Profissional de Saúde').trim();
+    const picture = profile.picture || '';
+
+    // Check if user already exists in local registry
+    const users = getRegisteredUsers();
+    const existing = users.find(u => u.email.trim().toLowerCase() === email);
+
+    if (existing) {
+      // Already registered - update profile picture/name and log in immediately
+      const updatedUser: RegisteredProfessionalUser = {
+        ...existing,
+        name: existing.name || name,
+        avatarUrl: picture || existing.avatarUrl,
+        authProvider: 'google',
+        googleId: profile.sub || profile.id || existing.googleId
+      };
+      saveRegisteredUser(updatedUser);
+      setAuthSuccess(true);
+      setAuthSuccessMsg(`Autenticado com sucesso via Google! Bem-vindo(a), ${updatedUser.name}!`);
+      onLoginAs(updatedUser);
+
+      setTimeout(() => {
+        setAuthSuccess(false);
+        onClose();
+      }, 900);
+    } else {
+      // New user: prefill verified Google information and open onboarding step
+      setGoogleEmail(email);
+      setGoogleName(name);
+      setGoogleAvatarUrl(picture);
+      setActiveTab('google_onboarding');
     }
-    setActiveTab('google_onboarding');
+  };
+
+  // Real Google Sign-In with OAuth Popup & Identity Services
+  const handleRealGoogleSignIn = async () => {
+    setErrorMessage('');
+    setIsGoogleLoading(true);
+
+    try {
+      await initiateGoogleOAuthPopup(
+        (profile: GoogleProfile) => {
+          handleGoogleSuccessProfile(profile);
+        },
+        (errorMsg: string) => {
+          setIsGoogleLoading(false);
+          // If errorMsg is empty, the user simply closed or canceled the popup window
+          if (errorMsg) {
+            setErrorMessage(errorMsg);
+          }
+        }
+      );
+    } catch (err: any) {
+      setIsGoogleLoading(false);
+      setErrorMessage('Erro ao inicializar serviço Google. Verifique sua conexão.');
+    }
   };
 
   // Submit Google Onboarding
@@ -353,7 +424,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
     const newGoogleUser: RegisteredProfessionalUser = {
       id: `usr-g-${Date.now()}`,
-      name: trimmedName, // NOME COMPLETO REAL CADASTRADO
+      name: trimmedName,
       email: cleanEmail,
       crn: finalRegistry,
       specialty: finalSpecialty,
@@ -363,13 +434,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       dailyMessageLimit: 30,
       monthlyMessageCount: 0,
       monthlyMessageLimit: 50,
-      activeSince: formatBrasiliaShortDate()
+      activeSince: formatBrasiliaShortDate(),
+      avatarUrl: googleAvatarUrl || undefined,
+      authProvider: 'google',
+      googleId: googleVerifiedProfile?.sub || googleVerifiedProfile?.id
     };
 
     setTimeout(() => {
       setIsProcessing(false);
       setAuthSuccess(true);
-      setAuthSuccessMsg(`Cadastro Google de ${trimmedName} validado com sucesso!`);
+      setAuthSuccessMsg(`Conta Google de ${trimmedName} ativada com sucesso!`);
 
       // Salva no banco de usuários registrados
       saveRegisteredUser(newGoogleUser);
@@ -381,6 +455,43 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         onClose();
       }, 900);
     }, 800);
+  };
+
+  // Quick 1-click access for Google users who want to complete CRN later
+  const handleQuickGoogleAccess = () => {
+    const trimmedName = googleName.trim() || 'Profissional de Saúde';
+    const cleanEmail = googleEmail.trim().toLowerCase() || 'profissional@gmail.com';
+    setIsProcessing(true);
+
+    const quickGoogleUser: RegisteredProfessionalUser = {
+      id: `usr-g-${Date.now()}`,
+      name: trimmedName,
+      email: cleanEmail,
+      crn: `${googleRoleType}-${googleUF} Provisório`,
+      specialty: googleSpecialty === 'Outro' ? 'Nutrição Clínica' : googleSpecialty,
+      plan: 'free',
+      isSubscribed: false,
+      dailyMessageCount: 0,
+      dailyMessageLimit: 30,
+      monthlyMessageCount: 0,
+      monthlyMessageLimit: 50,
+      activeSince: formatBrasiliaShortDate(),
+      avatarUrl: googleAvatarUrl || undefined,
+      authProvider: 'google',
+      googleId: googleVerifiedProfile?.sub || googleVerifiedProfile?.id
+    };
+
+    setTimeout(() => {
+      setIsProcessing(false);
+      setAuthSuccess(true);
+      setAuthSuccessMsg(`Acesso iniciado com a Conta Google!`);
+      saveRegisteredUser(quickGoogleUser);
+      onLoginAs(quickGoogleUser);
+      setTimeout(() => {
+        setAuthSuccess(false);
+        onClose();
+      }, 900);
+    }, 600);
   };
 
   const handleForgotPasswordSubmit = (e: React.FormEvent) => {
@@ -518,17 +629,36 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <form onSubmit={handleCompleteGoogleOnboarding} className="space-y-3.5">
               
               <div className="bg-[#1c063b] p-3.5 rounded-2xl border border-purple-800/60 text-xs text-purple-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                  </svg>
-                  <span className="font-bold text-white">Etapa de Onboarding Profissional Obrigatória</span>
+                <div className="flex items-center gap-3 mb-2">
+                  {googleAvatarUrl ? (
+                    <img 
+                      src={googleAvatarUrl} 
+                      alt={googleName || 'Avatar Google'} 
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full border-2 border-fuchsia-400 shadow-md object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-purple-900/60 border border-purple-700 flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-white text-xs">{googleName || 'Profissional'}</span>
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                        <CheckCircle className="w-2.5 h-2.5" /> Google Verificado
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-purple-300 truncate">{googleEmail}</p>
+                  </div>
                 </div>
-                <p className="text-[11px] text-purple-300">
-                  Para habilitar o prontuário eletrônico e a emissão de laudos com assinatura digital, preencha os dados do seu conselho profissional:
+                <p className="text-[11px] text-purple-300/90 leading-relaxed">
+                  Para habilitar prontuários eletrônicos, emissão de planos alimentares e assinatura digital de laudos, confirme seu registro profissional:
                 </p>
               </div>
 
@@ -708,14 +838,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 )}
               </button>
 
-              <div className="text-center pt-1">
+              <div className="flex items-center justify-between pt-1 text-xs">
+                <button
+                  type="button"
+                  onClick={handleQuickGoogleAccess}
+                  className="text-fuchsia-300 hover:text-white underline text-[11px]"
+                >
+                  Pular CRN agora e acessar
+                </button>
                 <button
                   type="button"
                   onClick={() => { setActiveTab('login'); setErrorMessage(''); }}
-                  className="text-xs text-purple-300 hover:text-white flex items-center justify-center gap-1 mx-auto"
+                  className="text-purple-300 hover:text-white flex items-center gap-1 text-[11px]"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Voltar para Login Tradicional</span>
+                  <ArrowLeft className="w-3 h-3" />
+                  <span>Voltar</span>
                 </button>
               </div>
 
@@ -724,21 +861,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             /* TAB: REGISTER COMPLETE FORM */
             <form onSubmit={handleRegister} className="space-y-3.5">
               
-              {/* Google Social Fast-Track Register -> triggers Onboarding */}
-              <button
-                type="button"
-                onClick={handleInitiateGoogleAuth}
-                disabled={isProcessing}
-                className="w-full py-2.5 px-4 bg-[#1b0638] hover:bg-[#26084e] border border-purple-700/60 hover:border-fuchsia-400/60 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-2.5 shadow-sm"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                <span>Cadastrar com o Google</span>
-              </button>
+              {/* Native Google Identity Services GIS Official Button */}
+              <div className="space-y-2">
+                <GoogleLoginButton
+                  onSuccess={handleGoogleSuccessProfile}
+                  onError={(err) => err && setErrorMessage(err)}
+                  text="signup_with"
+                  theme="outline"
+                  size="large"
+                  shape="rectangular"
+                />
+              </div>
 
               <div className="flex items-center gap-3 my-2">
                 <div className="flex-1 h-px bg-purple-900/60"></div>
@@ -1085,21 +1218,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             /* TAB: TRADITIONAL LOGIN */
             <form onSubmit={handleCustomLogin} className="space-y-4">
               
-              {/* Google Social Fast-Track Login -> triggers Google Onboarding */}
-              <button
-                type="button"
-                onClick={handleInitiateGoogleAuth}
-                disabled={isProcessing}
-                className="w-full py-2.5 px-4 bg-[#1b0638] hover:bg-[#26084e] border border-purple-700/60 hover:border-fuchsia-400/60 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-2.5 shadow-sm"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                <span>Continuar com o Google</span>
-              </button>
+              {/* Native Google Identity Services GIS Official Button */}
+              <div className="space-y-2">
+                <GoogleLoginButton
+                  onSuccess={handleGoogleSuccessProfile}
+                  onError={(err) => err && setErrorMessage(err)}
+                  text="signin_with"
+                  theme="outline"
+                  size="large"
+                  shape="rectangular"
+                />
+              </div>
 
               <div className="flex items-center gap-3 my-2">
                 <div className="flex-1 h-px bg-purple-900/60"></div>

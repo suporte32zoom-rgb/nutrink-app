@@ -122,13 +122,29 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         {/* Header Strip */}
         <div className="p-4 sm:p-5 bg-[#1e053a] border-b border-purple-800/50 flex items-center justify-between shrink-0 sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-fuchsia-600 to-purple-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-fuchsia-950/50 border border-fuchsia-400/30 shrink-0">
-              {formData.name ? formData.name.charAt(0) : 'P'}
-            </div>
+            {userAccount.avatarUrl ? (
+              <img
+                src={userAccount.avatarUrl}
+                alt={formData.name || 'Avatar'}
+                referrerPolicy="no-referrer"
+                className="w-11 h-11 rounded-2xl object-cover shadow-md shadow-fuchsia-950/50 border-2 border-fuchsia-400 shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-fuchsia-600 to-purple-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-fuchsia-950/50 border border-fuchsia-400/30 shrink-0">
+                {formData.name ? formData.name.charAt(0) : 'P'}
+              </div>
+            )}
             <div>
-              <h2 className="text-base sm:text-lg font-black text-white leading-tight">
-                {formData.name || 'Perfil Profissional'}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-black text-white leading-tight">
+                  {formData.name || 'Perfil Profissional'}
+                </h2>
+                {userAccount.authProvider === 'google' && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    <CheckCircle2 className="w-2.5 h-2.5" /> Google
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-1.5 text-xs text-purple-300 font-medium mt-0.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="text-fuchsia-300 font-bold">

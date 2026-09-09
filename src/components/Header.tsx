@@ -214,9 +214,18 @@ export const Header: React.FC<HeaderProps> = ({
                 title={`Profissional: ${userAccount.name} • ${userAccount.crn} • ${userAccount.specialty} • Plano: ${planLabel}`}
                 id="btn-header-user-profile"
               >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-tr from-fuchsia-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm border border-fuchsia-400/30 shrink-0 flex-shrink-0">
-                  {userAccount.name.charAt(0)}
-                </div>
+                {userAccount.avatarUrl ? (
+                  <img
+                    src={userAccount.avatarUrl}
+                    alt={userAccount.name}
+                    referrerPolicy="no-referrer"
+                    className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg object-cover border border-fuchsia-400 shadow-sm shrink-0 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-tr from-fuchsia-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm border border-fuchsia-400/30 shrink-0 flex-shrink-0">
+                    {userAccount.name.charAt(0)}
+                  </div>
+                )}
                 
                 {/* Professional Name, Title (Nutrólogo/Nutricionista), Registry and Plan Tag */}
                 <div className="hidden sm:block text-left text-xs leading-tight">

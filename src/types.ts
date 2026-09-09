@@ -254,6 +254,9 @@ export interface UserAccount {
   clinicAddress?: string;
   clinicName?: string;
   prescriptionFooter?: string;
+  avatarUrl?: string;
+  authProvider?: 'google' | 'local' | 'email';
+  googleId?: string;
 }
 
 export interface NutriaMessage {
