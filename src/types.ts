@@ -67,6 +67,27 @@ export interface MealPlan {
   supplements?: string[];
 }
 
+export interface PrescriptionItem {
+  id: string;
+  name: string;
+  dosage: string;
+  form: 'capsula' | 'po' | 'gotas' | 'comprimido' | 'shot' | 'flaconete' | 'sache';
+  posology: string;
+  indication?: string;
+  notes?: string;
+}
+
+export interface ClinicalPrescription {
+  id: string;
+  patientId: string;
+  date: string;
+  title: string;
+  type: 'manipulado' | 'fitoterapico' | 'suplemento_esportivo' | 'vitaminas_minerais' | 'personalizado';
+  instructions?: string;
+  items: PrescriptionItem[];
+  nutriaGenerated?: boolean;
+}
+
 export interface LabMarker {
   id: string;
   marker: string;
@@ -143,6 +164,7 @@ export interface Patient {
   get: number;
   anamnese: Anamnese;
   mealPlan?: MealPlan;
+  prescriptions?: ClinicalPrescription[];
   evolutionHistory: AnthropometricRecord[];
   labExams: LabExam[];
   notes: string;

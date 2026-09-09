@@ -796,6 +796,8 @@ Seu acesso ao **Plano ${plan === 'premium_anual' ? 'Premium Anual (R$ 399,00 à 
               setSelectedPatientId(patientId);
               setCurrentTab('telemedicine');
             }}
+            appointments={appointments}
+            onUpdateAppointmentStatus={handleUpdateAppointmentStatus}
           />
         )}
 

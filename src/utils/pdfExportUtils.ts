@@ -1,4 +1,4 @@
-import { Patient, MealPlan, UserAccount } from '../types';
+import { Patient, MealPlan, UserAccount, ClinicalPrescription } from '../types';
 import { 
   normalizeHeightToCm, 
   normalizeHeightToMeters, 
@@ -485,4 +485,197 @@ export function generateShoppingListFromMealPlan(patient: Patient): GroceryCateg
   });
 
   return result;
+}
+
+/**
+ * Generates an official, beautifully formatted medical/nutrition prescription letterhead for printing or PDF export
+ */
+export function printPrescriptionPdf(patient: Patient, prescription: ClinicalPrescription, userAccount?: UserAccount): void {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert('Por favor, permita janelas pop-up para gerar a impressão da prescrição.');
+    return;
+  }
+
+  const doctorName = userAccount?.name || 'Profissional de Saúde';
+  const doctorCrn = userAccount?.crn || 'CRN / CRM Ativo';
+  const doctorSpecialty = userAccount?.specialty || 'Nutrição Clínica & Funcional';
+  const clinicName = userAccount?.clinicName || 'NutrinK • Consultório Virtual de Nutrição';
+  const clinicAddress = userAccount?.clinicAddress || '';
+  const clinicPhone = userAccount?.phone || '';
+  const clinicEmail = userAccount?.email || 'contato@nutrink.com.br';
+  const prescriptionFooter = userAccount?.prescriptionFooter || 'Uso exclusivo para fins dietoterápicos e de suplementação personalizada.';
+  const nowStr = new Date().toLocaleDateString('pt-BR');
+
+  const itemsHtml = prescription.items && prescription.items.length > 0
+    ? prescription.items.map((it, idx) => `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <span style="font-size: 15px; font-weight: 800; color: #0f172a;">${idx + 1}. ${it.name}</span>
+            <span style="font-size: 14px; font-weight: 800; color: #7c3aed; background: #ede9fe; padding: 3px 10px; border-radius: 6px;">${it.dosage}</span>
+          </div>
+          <div style="font-size: 12px; color: #475569; margin-bottom: 6px;">
+            <strong>Forma:</strong> ${it.form.toUpperCase()} ${it.indication ? `• <em>${it.indication}</em>` : ''}
+          </div>
+          <div style="font-size: 13px; color: #1e293b; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-weight: 600;">
+            📌 <strong>Posologia:</strong> ${it.posology}
+          </div>
+          ${it.notes ? `<div style="font-size: 11px; color: #64748b; margin-top: 6px; font-style: italic;">Obs: ${it.notes}</div>` : ''}
+        </div>
+      `).join('')
+    : '<p style="padding: 20px; font-style: italic;">Nenhum item adicionado a esta prescrição.</p>';
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>Prescrição Nutricional - ${prescription.title} | ${patient.name}</title>
+        <style>
+          @page { size: A4; margin: 1.5cm; }
+          * { box-sizing: border-box; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.5;
+            background: #fff;
+            margin: 0;
+            padding: 20px;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2.5px solid #7c3aed;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+          }
+          .clinic-name { font-size: 20px; font-weight: 800; color: #5b21b6; }
+          .doctor-name { font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+          .doctor-reg { font-size: 12px; color: #64748b; font-weight: 600; }
+          .patient-box {
+            background: #fdf4ff;
+            border: 1px solid #f0abfc;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+          }
+          .rx-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #4c1d95;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .footer {
+            margin-top: 40px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 11px;
+            color: #94a3b8;
+          }
+          .signature-area {
+            margin-top: 50px;
+            text-align: center;
+          }
+          .sig-line {
+            width: 260px;
+            border-top: 1px solid #0f172a;
+            margin: 0 auto 6px auto;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="clinic-name">${clinicName}</div>
+            <div class="doctor-name">${doctorName}</div>
+            <div class="doctor-reg">${doctorCrn} • ${doctorSpecialty}</div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #64748b;">
+            <div><strong>Data:</strong> ${prescription.date || nowStr}</div>
+            ${clinicPhone ? `<div>Tel: ${clinicPhone}</div>` : ''}
+            <div>${clinicEmail}</div>
+          </div>
+        </div>
+
+        <div class="patient-box">
+          <div style="font-size: 15px; font-weight: 800; color: #701a75;">
+            Paciente: ${patient.name}
+          </div>
+          <div style="font-size: 12px; color: #86198f; margin-top: 4px;">
+            Idade: ${patient.age > 0 ? `${patient.age} anos` : 'A definir'} • Objetivo: ${patient.objective.replace('_', ' ').toUpperCase()} • Peso Atual: ${patient.currentWeightKg > 0 ? `${patient.currentWeightKg} kg` : '-'}
+          </div>
+        </div>
+
+        <div class="rx-title">
+          💊 RECEITUÁRIO NUTRICIONAL / SUPLEMENTAÇÃO: ${prescription.title}
+        </div>
+
+        ${prescription.instructions ? `
+          <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #92400e; border-radius: 0 8px 8px 0;">
+            <strong>Instruções Gerais:</strong> ${prescription.instructions}
+          </div>
+        ` : ''}
+
+        <div class="items-list">
+          ${itemsHtml}
+        </div>
+
+        <div class="signature-area">
+          <div class="sig-line"></div>
+          <div style="font-size: 13px; font-weight: 800; color: #0f172a;">${doctorName}</div>
+          <div style="font-size: 11px; color: #64748b;">${doctorCrn} • ${doctorSpecialty}</div>
+        </div>
+
+        <div class="footer">
+          <div>${prescriptionFooter}</div>
+          <div style="margin-top: 4px;">Documento gerado eletronicamente via NutrinK • Sistema de Prontuário e Gestão Nutricional Integrada</div>
+        </div>
+
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
+/**
+ * Builds formatted WhatsApp message text for prescriptions and opens WhatsApp directly
+ */
+export function sendPrescriptionViaWhatsApp(patient: Patient, prescription: ClinicalPrescription, userAccount?: UserAccount): void {
+  const phoneDigits = (patient.phone || '').replace(/\D/g, '');
+  const doctorName = userAccount?.name || 'Dr(a). Nutricionista';
+
+  let text = `Olá, *${patient.name}*! Tudo bem? Aqui é do consultório de *${doctorName}*.\n\n`;
+  text += `💊 Segue a sua *Prescrição / Protocolo de Suplementação* atualizado (*${prescription.title}*):\n\n`;
+
+  if (prescription.instructions) {
+    text += `📋 *Orientações:* ${prescription.instructions}\n\n`;
+  }
+
+  prescription.items.forEach((it, idx) => {
+    text += `*${idx + 1}. ${it.name}* (${it.dosage})\n`;
+    text += `• Forma: ${it.form.toUpperCase()}\n`;
+    text += `• Posologia: ${it.posology}\n`;
+    if (it.notes) text += `• Observação: ${it.notes}\n`;
+    text += `\n`;
+  });
+
+  text += `Dúvidas sobre dosagens ou manipulação, estou à disposição!\n`;
+  text += `_NutrinK • Gestão Clínica & Suplementação_`;
+
+  const encoded = encodeURIComponent(text);
+  const targetUrl = phoneDigits.length >= 10
+    ? `https://wa.me/55${phoneDigits}?text=${encoded}`
+    : `https://wa.me/?text=${encoded}`;
+
+  window.open(targetUrl, '_blank');
 }
