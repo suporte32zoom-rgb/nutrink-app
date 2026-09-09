@@ -3,10 +3,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { 
   X, 
-  Copy, 
-  Check, 
-  Printer, 
-  Download, 
   Bot, 
   Search, 
   ChevronRight, 
@@ -70,7 +66,6 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
   const [selectedPageId, setSelectedPageId] = useState<string>(initialPageId || 'recursos');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -107,88 +102,6 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
   const handleSelectDocument = (pageId: string) => {
     setSelectedPageId(pageId);
     setViewMode('document');
-  };
-
-  const handleCopyMarkdown = () => {
-    navigator.clipboard.writeText(cleanMathAndLatex(currentPage.markdownContent));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
-
-  const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${currentPage.title} • NutrinK</title>
-          <meta charset="utf-8" />
-          <style>
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-              line-height: 1.6; 
-              padding: 40px; 
-              color: #1e293b; 
-              max-width: 860px; 
-              margin: 0 auto; 
-            }
-            .header-banner {
-              border-bottom: 3px solid #7c3aed;
-              padding-bottom: 12px;
-              margin-bottom: 24px;
-            }
-            .brand-title {
-              font-size: 20px;
-              font-weight: 800;
-              color: #5b21b6;
-            }
-            .doc-tag {
-              font-size: 11px;
-              font-weight: bold;
-              text-transform: uppercase;
-              color: #64748b;
-              margin-top: 4px;
-            }
-            h1 { color: #0f172a; font-size: 24px; margin-top: 16px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
-            h2 { color: #334155; font-size: 18px; margin-top: 24px; }
-            h3 { color: #475569; font-size: 15px; margin-top: 16px; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
-            th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
-            th { background-color: #f1f5f9; font-weight: 700; color: #1e293b; }
-            blockquote { border-left: 4px solid #8b5cf6; padding: 8px 16px; margin: 16px 0; background-color: #f8fafc; color: #475569; font-style: italic; }
-            hr { border: none; border-top: 1px solid #e2e8f0; margin: 24px 0; }
-            ul, ol { padding-left: 24px; }
-            li { margin-bottom: 6px; }
-            .footer-note { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 11px; color: #94a3b8; text-align: center; }
-          </style>
-        </head>
-        <body>
-          <div class="header-banner">
-            <div class="brand-title">NutrinK • Documentação Oficial & Governança Clínica</div>
-            <div class="doc-tag">Categoria: ${currentPage.categoryLabel} | Documento: ${currentPage.title}</div>
-          </div>
-          <pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px;">${cleanMathAndLatex(currentPage.markdownContent)}</pre>
-          <div class="footer-note">
-            NutrinK • Plataforma e Consultório Virtual de Inteligência Artificial para Gestão Nutricional e Clínica • Documento emitido para fins institucionais e regulatórios.
-          </div>
-          <script>window.onload = function() { window.print(); }</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  const handleDownload = () => {
-    const blob = new Blob([cleanMathAndLatex(currentPage.markdownContent)], { type: 'text/markdown;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `NutrinK_${currentPage.id}.md`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   const handleAskNutria = () => {
@@ -252,19 +165,6 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
 
           {/* Header Action Buttons */}
           <div className="flex items-center gap-2">
-            
-            {viewMode === 'document' && (
-              <button
-                onClick={handleCopyMarkdown}
-                className="p-2 text-purple-300 hover:text-white bg-[#1e073c] hover:bg-[#2e0b59] rounded-xl border border-purple-800/60 transition-all text-xs font-medium hidden sm:flex items-center gap-1.5"
-                title="Copiar texto do documento"
-                id="btn-copy-doc-header"
-              >
-                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                <span className="text-[11px]">{copied ? 'Copiado!' : 'Copiar'}</span>
-              </button>
-            )}
-
             <button
               onClick={onClose}
               className="p-2 text-purple-300 hover:text-white bg-[#18042f] rounded-xl hover:bg-[#2e0b59] border border-purple-900/40 transition-all"
@@ -406,42 +306,8 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
                 </div>
               </div>
 
-              {/* Utility Tools */}
+              {/* Actions */}
               <div className="flex items-center gap-1.5 sm:gap-2">
-                
-                {/* Copy Markdown */}
-                <button
-                  onClick={handleCopyMarkdown}
-                  className="px-2.5 py-1.5 bg-[#25084a] hover:bg-[#340b68] text-purple-200 hover:text-white rounded-xl border border-purple-700/50 text-xs font-semibold flex items-center gap-1.5 transition-all"
-                  title="Copiar texto estruturado em Markdown"
-                  id="btn-copy-doc-markdown"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span className="hidden sm:inline">{copied ? 'Copiado!' : 'Copiar'}</span>
-                </button>
-
-                {/* Print */}
-                <button
-                  onClick={handlePrint}
-                  className="px-2.5 py-1.5 bg-[#25084a] hover:bg-[#340b68] text-purple-200 hover:text-white rounded-xl border border-purple-700/50 text-xs font-semibold flex items-center gap-1.5 transition-all"
-                  title="Imprimir documento ou salvar como PDF"
-                  id="btn-print-doc"
-                >
-                  <Printer className="w-3.5 h-3.5 text-purple-300" />
-                  <span className="hidden sm:inline">Imprimir / PDF</span>
-                </button>
-
-                {/* Download Markdown */}
-                <button
-                  onClick={handleDownload}
-                  className="px-2.5 py-1.5 bg-[#25084a] hover:bg-[#340b68] text-purple-200 hover:text-white rounded-xl border border-purple-700/50 text-xs font-semibold flex items-center gap-1.5 transition-all"
-                  title="Baixar arquivo .MD"
-                  id="btn-download-doc-md"
-                >
-                  <Download className="w-3.5 h-3.5 text-purple-300" />
-                  <span className="hidden sm:inline">Baixar .MD</span>
-                </button>
-
                 {/* Ask Nutria AI */}
                 {onOpenNutriaPrompt && (
                   <button
@@ -453,7 +319,6 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
                     <span>Copiloto NUTRIA</span>
                   </button>
                 )}
-
               </div>
             </div>
 
