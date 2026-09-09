@@ -16,6 +16,8 @@ import { Gender, ClinicalProtocol } from '../types';
 import { 
   calculateMetabolicRates, 
   calculatePollock3Folds, 
+  calculateIdealWeight,
+  calculateAdjustedWeight,
   normalizeHeightToCm, 
   normalizeHeightToMeters 
 } from '../utils/nutritionCalculations';
@@ -75,8 +77,15 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
 
   const pollockResults = calculatePollock3Folds(gender, ageYears, fold1, fold2, fold3);
 
+  // Peso Ideal e Peso Ajustado para Obesidade (IMC >= 30)
+  const idealWeight = calculateIdealWeight(rawHeight);
+  const adjustedWeight = calculateAdjustedWeight(weightKg, rawHeight);
+  const isObese = metabolicResults.bmi >= 30;
+
   // Custom Macro Calculations (Zero-safe)
-  const calculatedProteinGrams = weightKg > 0 ? Math.round(weightKg * customProteinGPerKg) : 0;
+  // Em obesidade, a base proteica clínica recomendada utiliza o Peso Ajustado
+  const effectiveWeightForProtein = (isObese && adjustedWeight > 0) ? adjustedWeight : weightKg;
+  const calculatedProteinGrams = effectiveWeightForProtein > 0 ? Math.round(effectiveWeightForProtein * customProteinGPerKg) : 0;
   const proteinCalories = calculatedProteinGrams * 4;
   const fatCalories = metabolicResults.get > 0 ? Math.round(metabolicResults.get * 0.25) : 0;
   const fatGrams = Math.round(fatCalories / 9);
@@ -399,10 +408,37 @@ export const NutriCalcView: React.FC<NutriCalcViewProps> = ({ onOpenNutriaWithPr
 
             {/* Macronutrient Distribution Card */}
             <div className="bg-[#150328] border border-purple-900/50 rounded-3xl p-5 sm:p-6 space-y-4 shadow-md">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-fuchsia-400" />
-                Distribuição Recomendada de Macronutrientes (Diária)
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-fuchsia-400" />
+                  Distribuição Recomendada de Macronutrientes (Diária)
+                </h3>
+                {isObese && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    Manejo de Obesidade (IMC ≥ 30) • Peso Ajustado
+                  </span>
+                )}
+              </div>
+
+              {isObese && (
+                <div className="p-3.5 bg-gradient-to-r from-amber-950/40 via-purple-950/40 to-fuchsia-950/30 rounded-2xl border border-amber-500/30 text-xs space-y-1.5 text-purple-100">
+                  <div className="flex items-center justify-between font-bold text-amber-300">
+                    <span>Diretriz ABESO / CFN: Peso Ajustado</span>
+                    <span>IMC: {metabolicResults.bmi} kg/m²</span>
+                  </div>
+                  <p className="text-[11px] text-purple-200 leading-relaxed">
+                    Para evitar sobrecarga renal e metabólica em pacientes com obesidade, a meta de proteínas é calculada sobre o <strong>Peso Ajustado ({adjustedWeight} kg)</strong> em vez do peso real ({weightKg} kg).
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 pt-1 text-[10px] font-semibold text-purple-200">
+                    <span className="p-1.5 bg-[#120326]/60 rounded-lg border border-purple-800/40">
+                      Peso Ideal (IMC 22.5): <strong className="text-white">{idealWeight} kg</strong>
+                    </span>
+                    <span className="p-1.5 bg-[#120326]/60 rounded-lg border border-amber-500/40">
+                      Peso Ajustado: <strong className="text-amber-300">{adjustedWeight} kg</strong>
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-3 text-xs">
                 

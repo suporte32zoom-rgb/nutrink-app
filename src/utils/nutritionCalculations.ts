@@ -82,6 +82,30 @@ export function calculateBMI(weightKg: number, rawHeight: number): {
 }
 
 /**
+ * Cálculo do Peso Ideal Teórico:
+ * Peso Ideal = (Altura em metros)² × 22.5
+ */
+export function calculateIdealWeight(rawHeight: number): number {
+  const heightM = normalizeHeightToMeters(rawHeight);
+  if (!heightM || heightM <= 0) return 0;
+  return Number((heightM * heightM * 22.5).toFixed(1));
+}
+
+/**
+ * Cálculo do Peso Ajustado para Obesidade (IMC >= 30):
+ * Peso Ajustado = Peso Ideal + 0.25 × (Peso Real - Peso Ideal)
+ * Evita sobrecarga renal e metabólica na prescrição de macronutrientes (g/kg).
+ */
+export function calculateAdjustedWeight(weightKg: number, rawHeight: number): number {
+  if (!weightKg || weightKg <= 0) return 0;
+  const idealWeight = calculateIdealWeight(rawHeight);
+  if (!idealWeight || idealWeight <= 0) return weightKg;
+  if (weightKg <= idealWeight) return weightKg;
+  const adjusted = idealWeight + 0.25 * (weightKg - idealWeight);
+  return Number(adjusted.toFixed(1));
+}
+
+/**
  * Cálculo Dinâmico de TMB (Mifflin-St Jeor):
  * - Homens: (10 * peso_kg) + (6.25 * altura_cm) - (5 * idade) + 5
  * - Mulheres: (10 * peso_kg) + (6.25 * altura_cm) - (5 * idade) - 161
