@@ -30,6 +30,7 @@ import {
 import { NutriaMessage, Patient, Appointment, UserAccount } from '../types';
 import { speakText, stopSpeech } from '../utils/voiceUtils';
 import { callNutriaDirect } from '../services/nutriaGeminiDirect';
+import { cleanMathAndLatex } from '../utils/cleanMarkdown';
 
 interface NutriaCopilotProps {
   messages?: NutriaMessage[];
@@ -183,14 +184,16 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
   };
 
   const handleCopyMarkdown = (msgId: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    const cleaned = cleanMathAndLatex(text);
+    navigator.clipboard.writeText(cleaned);
     setCopiedMessageId(msgId);
     setTimeout(() => setCopiedMessageId(null), 2500);
   };
 
   const handleDownloadReport = (content: string, id: string) => {
+    const cleaned = cleanMathAndLatex(content);
     const header = `# NUTRINK - PARECER CLÍNICO NUTRIA\nEmitido em: ${new Date().toLocaleString('pt-BR')}\n---\n\n`;
-    const fullText = header + content;
+    const fullText = header + cleaned;
     const blob = new Blob([fullText], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -206,7 +209,8 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     
-    const parsedHtml = marked.parse(content);
+    const cleaned = cleanMathAndLatex(content);
+    const parsedHtml = marked.parse(cleaned);
     
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -539,7 +543,7 @@ export const NutriaCopilot: React.FC<NutriaCopilotProps> = ({
                             blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-fuchsia-500 pl-3.5 py-1.5 bg-purple-950/40 text-purple-100 italic my-3 rounded-r-xl border-y border-r border-purple-900/30 text-xs sm:text-sm" {...props} />
                           }}
                         >
-                          {msg.content}
+                          {cleanMathAndLatex(msg.content)}
                         </ReactMarkdown>
 
                         {/* Interactive Upgrade CTA Button if message deals with plans */}

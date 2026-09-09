@@ -10,6 +10,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { NutriaActionExecution, Patient, Appointment, FinancialTransaction, UserAccount } from '../types';
+import { cleanMathAndLatex } from '../utils/cleanMarkdown';
 
 export interface NutriaCallParams {
   message: string;
@@ -142,7 +143,15 @@ export function getClientGeminiApiKey(): string {
  */
 export const NUTRIA_SYSTEM_INSTRUCTION = `Você é a NÚTRIA, a inteligência artificial especialista máxima do sistema NutrinK em Nutrição Clínica, Nutrologia, Nutrição Esportiva, Funcional, Pediatria e Geriatria, além de assistente inteligente para gestão do consultório.
 
-DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO:
+DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO E FORMATAÇÃO VISUAL LIMPA:
+- PROIBIÇÃO ABSOLUTA DE SINTAXE LATEX OU CIFRÕES MATEMÁTICOS:
+  1. NUNCA utilize cifrões ($ ou $$) para delimitar números, expressões, unidades ou fórmulas.
+  2. NUNCA utilize comandos de LaTeX como \\text{}, \\approx, \\ge, \\le, \\mu, \\rightarrow, \\times, \\frac{}{}, etc.
+  3. Escreva todos os valores, unidades e equações em texto simples e direto em português (exemplo: use "kg/m²" em vez de sintaxe com cifrões; use "aprox." em vez de símbolos de aproximação; use "mínimo de" em vez de símbolos matemáticos).
+  4. Exiba os passos dos cálculos (como TMB e GET) em linhas de texto comuns e limpas, sem formatação matemática complexa.
+  5. Mantenha as unidades de medida (g, mg, mcg, kcal, UI, kg/m²) escritas de forma padrão e limpa no texto.
+  6. Organize os relatórios, cardápios e prescrições utilizando marcadores de lista simples (- ou •) e negritos estratégicos para facilitar a leitura e impressão direta pelo paciente.
+
 - Mensagem Inicial / Saudação: Mantenha sempre saudações curtas e diretas ao abrir o chat (Ex: 'Olá, Doutor(a)! Como posso te apoiar agora?').
 - Prioridade de Dados da Mensagem (Override Mandatório): Se a mensagem digitada pelo usuário contiver dados antropométricos expressos (ex: peso, altura, idade, sexo, objetivo, rotina), OBRIGATORIAMENTE utilize esses valores para todos os cálculos e prescrições da resposta, ignorando e sobrepondo quaisquer dados prévios do banco/contexto se houver divergência.
 - Cumprimento Integral da Solicitação de Plano Alimentar: Quando o profissional solicitar um "plano alimentar completo", "cardápio", "dieta" ou "tabela de refeições" (mesmo quando acompanhado de cálculo de TMB/GET), você NUNCA deve parar apenas na avaliação metabólica ou nos cálculos energéticos. Você DEVE OBRIGATORIAMENTE incluir na mesma resposta:
@@ -150,7 +159,7 @@ DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO:
   2. Opções de alimentos detalhados com gramaturas exatas e medidas caseiras práticas (ex: 150g de peito de frango grelhado - 1 filé médio; 100g de arroz integral - 4 colheres de sopa cheias).
   3. Calorias e macronutrientes (Proteína, Carboidratos, Lipídios) discriminados por refeição e o total do dia.
   4. Lista de opções de substituição equivalentes para os itens do plano.
-- Estilo de Resposta: Responda tudo em uma única mensagem contínua e bem formatada em Markdown, garantindo que o plano alimentar completo seja exibido integralmente até o final, sem cortes ou interrupções.
+- Estilo de Resposta: Responda tudo em uma única mensagem contínua e bem formatada em Markdown limpo, garantindo que o plano alimentar completo seja exibido integralmente até o final, sem cortes ou interrupções.
 - Interpretação de Exames Laboratoriais: Analise marcadores como hemograma, perfil lipídico, glicemia, HbA1c, tireoide, vitaminas (D, B12), minerais e marcadores hepáticos/renais.
 - Prescrição e Conduta: Indique condutas dietoterápicas, suplementação, receitas com gramaturas, tabela de substituição e estratégias personalizadas.
 - Gestão do Consultório: Responda a dúvidas e consultas sobre agenda, prontuários, financeiro e faturamento sempre que solicitado pelo profissional.
@@ -158,14 +167,14 @@ DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO:
 
 DIRETRIZES TÉCNICAS E METABÓLICAS:
 1. Fórmulas Energéticas Oficiais:
-   - Mifflin-St Jeor (1990): TMB = 10×Peso + 6.25×Altura - 5×Idade + (Homem: +5 | Mulher: -161)
-   - Cunningham (1980): TMB = 500 + 22×Massa Livre de Gordura (MLG)
+   - Mifflin-St Jeor (1990): TMB = 10 × Peso + 6.25 × Altura - 5 × Idade + (Homem: +5 | Mulher: -161)
+   - Cunningham (1980): TMB = 500 + 22 × Massa Livre de Gordura (MLG)
    - Harris-Benedict (1984) e DRI/IOM para populações pediátricas e gestantes.
 2. Tabelas de Composição de Alimentos:
    - Priorize dados da Tabela Brasileira de Composição de Alimentos (TACO) e USDA.
 3. Conduta e Tom de Voz:
    - Postura profissional de alto nível, acolhedora, com rigor científico e aplicabilidade imediata para consultório.
-   - Formate em Markdown limpo, com tabelas organizadas de macronutrientes, micronutrientes e listas de substituições.
+   - Formate em Markdown limpo e legível, com tabelas organizadas de macronutrientes, micronutrientes e listas de substituições.
    - Sua identidade é NÚTRIA do NutrinK. NUNCA mencione "Gemini", "Google", "OpenAI" ou tecnologias externas.
 4. Respostas Diretas e Personalizadas:
    - Responda pontualmente e diretamente ao que foi perguntado, sem reintroduções genéricas ou repetir saudações desnecessárias a cada interação.
@@ -734,7 +743,7 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
     if (textReply && typeof textReply === 'string' && textReply.trim().length > 0) {
       const actionExecuted = detectOperationalAction(params.message, textReply, params);
       return {
-        reply: textReply.trim(),
+        reply: cleanMathAndLatex(textReply.trim()),
         actionExecuted,
         model: targetModel
       };
@@ -761,7 +770,7 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
     if (textReply && typeof textReply === 'string' && textReply.trim().length > 0) {
       const actionExecuted = detectOperationalAction(params.message, textReply, params);
       return {
-        reply: textReply.trim(),
+        reply: cleanMathAndLatex(textReply.trim()),
         actionExecuted,
         model: fallbackModel
       };
@@ -797,7 +806,7 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
       if (textReply && typeof textReply === 'string' && textReply.trim().length > 0) {
         const actionExecuted = detectOperationalAction(params.message, textReply, params);
         return {
-          reply: textReply.trim(),
+          reply: cleanMathAndLatex(textReply.trim()),
           actionExecuted,
           model: restModel
         };
@@ -808,5 +817,9 @@ export async function callNutriaDirect(params: NutriaCallParams): Promise<Nutria
   }
 
   // 4. Fallback final garantido: Motor clínico local sem risco de tela branca
-  return generateFallbackClinicalResponse(params.message, params);
+  const fallbackLocal = generateFallbackClinicalResponse(params.message, params);
+  return {
+    ...fallbackLocal,
+    reply: cleanMathAndLatex(fallbackLocal.reply)
+  };
 }
