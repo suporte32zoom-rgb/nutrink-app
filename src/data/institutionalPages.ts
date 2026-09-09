@@ -573,30 +573,45 @@ Nossa equipe técnica, comercial e de suporte clínico está pronta para atender
     category: 'conteudos_sobre',
     categoryLabel: 'CONTEÚDOS & SOBRE',
     iconName: 'BookOpen',
-    shortDescription: 'Perguntas frequentes sobre prescrição magistral, cálculos TMB/GET, PWA e a inteligência NÚTRIA.',
+    shortDescription: 'Perguntas frequentes sobre a plataforma, NÚTRIA, PWA, pagamentos e segurança.',
     markdownContent: `# ❓ Perguntas Frequentes sobre o NutrinK
 
-Tire suas dúvidas sobre as capacidades clínicas, funcionamento em PWA e inteligência artificial NÚTRIA do NutrinK.
+Tire suas dúvidas sobre o funcionamento da plataforma, recursos da inteligência NÚTRIA, instalação PWA, pagamentos e segurança.
 
 ---
 
-### 1. O NutrinK funciona como software de prescrição magistral para nutrólogos e nutricionistas?
-**Sim.** A inteligência **NÚTRIA** sugere dosagens personalizadas de fitoterápicos, suplementos e fórmulas manipuladas com base nos exames de sangue e anamnese do paciente.
+### 1. O NutrinK é voltado para quais profissionais?
+O **NutrinK** foi desenvolvido exclusivamente para nutricionistas, médicos nutrólogos e profissionais da saúde que realizam atendimento clínico e nutricional.
 
 ---
 
-### 2. Como a plataforma realiza o cálculo de TMB e GET durante a consulta?
-O **NutrinK** aplica automaticamente equações validadas (como **Mifflin-St Jeor**), ajustando as constantes por sexo, idade, peso e nível de atividade física para entregar a meta calórica em segundos.
+### 2. Como a NÚTRIA auxilia no atendimento e prescrição?
+A **NÚTRIA** analisa o histórico do paciente, exames e sintomas para calcular TMB/GET, sugerir planos alimentares e propor dosagens de suplementação e fórmulas manipuladas personalizadas.
 
 ---
 
-### 3. É possível utilizar o NutrinK como aplicativo PWA no celular e computador?
-**Sim.** O **NutrinK** é um PWA (*Progressive Web App*) totalmente responsivo que pode ser acessado direto no navegador ou instalado na tela inicial de qualquer dispositivo sem ocupar espaço de memória.
+### 3. Como instalar e usar o aplicativo PWA?
+Basta acessar o site pelo celular ou computador e selecionar **"Instalar aplicativo"** no navegador para adicioná-lo à tela inicial sem ocupar armazenamento.
 
 ---
 
-### 4. Quanto tempo leva para gerar um plano alimentar e conduta clínica com a NÚTRIA?
-Em menos de **2 minutos** a **NÚTRIA** estrutura o diagnóstico metabólico, a distribuição de macronutrientes, o plano alimentar e as tabelas de substituição equivalente.
+### 4. Como cadastrar e gerenciar pacientes?
+Você pode cadastrar manualmente pelo formulário de pacientes ou enviar os dados no chat da **NÚTRIA** para que ela cadastre automaticamente no prontuário.
+
+---
+
+### 5. Quais são os meios de pagamento disponíveis?
+Disponibilizamos pagamento via **PIX** (com aprovação imediata) e **Cartão de Crédito** para a assinatura dos planos.
+
+---
+
+### 6. Como funciona o cancelamento da assinatura?
+O cancelamento pode ser feito a qualquer momento diretamente no painel da sua conta, sem taxas adicionais ou fidelidade.
+
+---
+
+### 7. Como funciona a segurança dos dados armazenados?
+Os dados dos pacientes e consultas são armazenados em nuvem criptografada, respeitando integralmente as exigências da **LGPD**.
 
 ---
 

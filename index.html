@@ -124,34 +124,75 @@
   <body>
     <div id="root"></div>
 
-    <!-- ========================================== -->
-    <!-- 3. SEÇÃO FAQ VISUAL COM CAUDA LONGA (BODY) -->
-    <!-- ========================================== -->
-    <section id="faq-nutrink" style="padding: 40px 20px; max-width: 900px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
-      <h2 style="font-size: 1.8rem; margin-bottom: 24px; color: #111827;">Perguntas Frequentes sobre o NutrinK</h2>
-      
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <details style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; background-color: #ffffff;">
-          <summary style="font-weight: 600; font-size: 1.1rem; cursor: pointer; color: #1f2937;">O NutrinK funciona como software de prescrição magistral para nutrólogos e nutricionistas?</summary>
-          <p style="margin-top: 12px; color: #4b5563; line-height: 1.6;">Sim. A inteligência NÚTRIA sugere dosagens personalizadas de fitoterápicos, suplementos e fórmulas manipuladas com base nos exames de sangue e anamnese do paciente.</p>
-        </details>
-
-        <details style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; background-color: #ffffff;">
-          <summary style="font-weight: 600; font-size: 1.1rem; cursor: pointer; color: #1f2937;">Como a plataforma realiza o cálculo de TMB e GET durante a consulta?</summary>
-          <p style="margin-top: 12px; color: #4b5563; line-height: 1.6;">O NutrinK aplica automaticamente equações validadas (como Mifflin-St Jeor), ajustando as constantes por sexo, idade, peso e nível de atividade física para entregar a meta calórica em segundos.</p>
-        </details>
-
-        <details style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; background-color: #ffffff;">
-          <summary style="font-weight: 600; font-size: 1.1rem; cursor: pointer; color: #1f2937;">É possível utilizar o NutrinK como aplicativo PWA no celular e computador?</summary>
-          <p style="margin-top: 12px; color: #4b5563; line-height: 1.6;">Sim. O NutrinK é um PWA (Progressive Web App) totalmente responsivo que pode ser acessado direto no navegador ou instalado na tela inicial de qualquer dispositivo sem ocupar espaço de memória.</p>
-        </details>
-
-        <details style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; background-color: #ffffff;">
-          <summary style="font-weight: 600; font-size: 1.1rem; cursor: pointer; color: #1f2937;">Quanto tempo leva para gerar um plano alimentar e conduta clínica com a NÚTRIA?</summary>
-          <p style="margin-top: 12px; color: #4b5563; line-height: 1.6;">Em menos de 2 minutos a NÚTRIA estrutura o diagnóstico metabólico, a distribuição de macronutrientes, o plano alimentar e as tabelas de substituição equivalente.</p>
-        </details>
+    <!-- RODAPÉ LIMPO E MODAL DE FAQ (SEM EXIBIÇÃO EXPOSTA) -->
+    <footer style="padding: 20px; background-color: #0d0814; color: #a19bf0; font-family: sans-serif; font-size: 0.85rem; border-top: 1px solid #231b36;">
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 12px; align-items: center;">
+        <a href="#privacidade" style="color: #a19bf0; text-decoration: underline;">Privacidade</a>
+        <span>•</span>
+        <a href="#termos" style="color: #a19bf0; text-decoration: underline;">Termos</a>
+        <span>•</span>
+        <a href="#suporte" style="color: #a19bf0; text-decoration: underline;">Suporte Técnico</a>
+        <span>•</span>
+        <button onclick="document.getElementById('faq-modal').style.display='flex'" style="background: none; border: none; color: #a19bf0; text-decoration: underline; cursor: pointer; padding: 0; font-size: 0.85rem;">
+          Perguntas Frequentes
+        </button>
       </div>
-    </section>
+      <p style="margin: 0; color: #6b6488;">© 2026 NutrinK Tecnologia em Saúde Ltda. Todos os direitos reservados.</p>
+    </footer>
+
+    <!-- MODAL DE FAQ (ABRE APENAS AO CLICAR NO LINK DO RODAPÉ) -->
+    <div id="faq-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; padding: 15px;">
+      <div style="background: #160f24; border: 1px solid #32254e; border-radius: 12px; width: 100%; max-width: 650px; max-height: 85vh; overflow-y: auto; padding: 24px; color: #ffffff; font-family: sans-serif;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #32254e; padding-bottom: 12px;">
+          <h2 style="margin: 0; font-size: 1.3rem; color: #ffffff;">Perguntas Frequentes (FAQ)</h2>
+          <button onclick="document.getElementById('faq-modal').style.display='none'" style="background: #a19bf0; border: none; color: #160f24; font-weight: bold; border-radius: 6px; padding: 6px 12px; cursor: pointer;">Fechar ✕</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          
+          <!-- Sobre a Plataforma e NÚTRIA -->
+          <details style="background: #201633; border-radius: 8px; padding: 12px;">
+            <summary style="font-weight: 600; cursor: pointer; color: #a19bf0;">O NutrinK é voltado para quais profissionais?</summary>
+            <p style="margin-top: 8px; color: #d1cbe8; font-size: 0.9rem; line-height: 1.5;">O NutrinK foi desenvolvido exclusivamente para nutricionistas, médicos nutrólogos e profissionais da saúde que realizam atendimento clínico e nutricional.</p>
+          </details>
+
+          <details style="background: #201633; border-radius: 8px; padding: 12px;">
+            <summary style="font-weight: 600; cursor: pointer; color: #a19bf0;">Como a NÚTRIA auxilia no atendimento e prescrição?</summary>
+            <p style="margin-top: 8px; color: #d1cbe8; font-size: 0.9rem; line-height: 1.5;">A NÚTRIA analisa o histórico do paciente, exames e sintomas para calcular TMB/GET, sugerir planos alimentares e propor dosagens de suplementação e fórmulas manipuladas.</p>
+          </details>
+
+          <!-- Uso e PWA -->
+          <details style="background: #201633; border-radius: 8px; padding: 12px;">
+            <summary style="font-weight: 600; cursor: pointer; color: #a19bf0;">Como instalar e usar o aplicativo PWA?</summary>
+            <p style="margin-top: 8px; color: #d1cbe8; font-size: 0.9rem; line-height: 1.5;">Basta acessar o site pelo celular ou computador e selecionar 'Instalar aplicativo' no navegador para adicioná-lo à tela inicial sem ocupar armazenamento.</p>
+          </details>
+
+          <details style="background: #201633; border-radius: 8px; padding: 12px;">
+            <summary style="font-weight: 600; cursor: pointer; color: #a19bf0;">Como cadastrar e gerenciar pacientes?</summary>
+            <p style="margin-top: 8px; color: #d1cbe8; font-size: 0.9rem; line-height: 1.5;">Você pode cadastrar manualmente pelo formulário de pacientes ou enviar os dados no chat da NÚTRIA para que ela cadastre automaticamente.</p>
+          </details>
+
+          <!-- Pagamento e Assinatura -->
+          <details style="background: #201633; border-radius: 8px; padding: 12px;">
+            <summary style="font-weight: 600; cursor: pointer; color: #a19bf0;">Quais são os meios de pagamento disponíveis?</summary>
+            <p style="margin-top: 8px; color: #d1cbe8; font-size: 0.9rem; line-height: 1.5;">Disponibilizamos pagamento via PIX e cartão de crédito para a assinatura dos planos.</p>
+          </details>
+
+          <details style="background: #201633; border-radius: 8px; padding: 12px;">
+            <summary style="font-weight: 600; cursor: pointer; color: #a19bf0;">Como funciona o cancelamento da assinatura?</summary>
+            <p style="margin-top: 8px; color: #d1cbe8; font-size: 0.9rem; line-height: 1.5;">O cancelamento pode ser feito a qualquer momento diretamente no painel da sua conta, sem taxas adicionais ou fidelidade.</p>
+          </details>
+
+          <!-- Segurança e Suporte -->
+          <details style="background: #201633; border-radius: 8px; padding: 12px;">
+            <summary style="font-weight: 600; cursor: pointer; color: #a19bf0;">Como funciona a segurança dos dados armazenados?</summary>
+            <p style="margin-top: 8px; color: #d1cbe8; font-size: 0.9rem; line-height: 1.5;">Os dados dos pacientes e consultas são armazenados em nuvem criptografada, respeitando as exigências da LGPD.</p>
+          </details>
+
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.tsx"></script>
   </body>
