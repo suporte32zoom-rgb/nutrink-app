@@ -170,7 +170,7 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
           </div>
           <pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px;">${cleanMathAndLatex(currentPage.markdownContent)}</pre>
           <div class="footer-note">
-            NutrinK Soluções Tecnológicas em Saúde Ltda. • CNPJ 48.912.834/0001-90 • Documento emitido para fins institucionais e regulatórios.
+            NutrinK • Plataforma e Consultório Virtual de Inteligência Artificial para Gestão Nutricional e Clínica • Documento emitido para fins institucionais e regulatórios.
           </div>
           <script>window.onload = function() { window.print(); }</script>
         </body>

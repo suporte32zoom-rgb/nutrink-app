@@ -555,12 +555,11 @@ Nossa equipe técnica, comercial e de suporte clínico está pronta para atender
 
 ---
 
-## Dados Institucionais da Empresa
+## Natureza do Serviço
 
-- **Razão Social:** NutrinK Soluções Tecnológicas em Saúde Ltda.
-- **CNPJ:** 48.912.834/0001-90
-- **Endereço Sede:** Av. Paulista, 1842 - Conjunto 1408 - Bela Vista, São Paulo - SP, CEP 01310-200
-- **Portal Oficial:** \`https://nutrink.com.br\`
+- **Tipo de Serviço:** Plataforma e Consultório Virtual de Inteligência Artificial para Gestão Nutricional e Clínica.
+- **Atendimento:** 100% Digital e Automatizado.
+- **Portal Oficial:** https://nutrink.com.br
 
 ---
 
