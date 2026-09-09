@@ -370,7 +370,7 @@ O acesso ao NutrinK é protegido por camadas rigorosas de segurança digital e a
 
 *Última atualização: Agosto de 2026 • Versão Homologada 2.4*
 
-A **NutrinK Soluções Tecnológicas em Saúde Ltda.** (doravante "NutrinK") estabelece nesta Política de Privacidade o seu compromisso irrevogável com a segurança da informação, a privacidade e a proteção integral dos dados pessoais e dados pessoais sensíveis de saúde tratados no âmbito de sua plataforma SaaS.
+A **NutrinK Soluções Tecnológicas em Saúde Digital** (doravante "NutrinK") estabelece nesta Política de Privacidade o seu compromisso irrevogável com a segurança da informação, a privacidade e a proteção integral dos dados pessoais e dados pessoais sensíveis de saúde tratados no âmbito de sua plataforma SaaS.
 
 ---
 
@@ -465,7 +465,7 @@ Bem-vindo ao **NutrinK**. Ao criar uma conta, assinar um plano ou utilizar qualq
 ---
 
 ## 4. Propriedade Intelectual & Integridade do Software
-4.1. Todos os algoritmos, marcas, logotipos, interfaces gráficas, bancos de dados, textos e códigos da plataforma pertencem exclusivamente à **NutrinK Soluções Tecnológicas em Saúde Ltda.**  
+4.1. Todos os algoritmos, marcas, logotipos, interfaces gráficas, bancos de dados, textos e códigos da plataforma pertencem exclusivamente à **NutrinK Soluções Tecnológicas em Saúde Digital**.  
 4.2. É estritamente proibida qualquer tentativa de engenharia reversa, descompilação, cópia, espelhamento ou comercialização não autorizada da plataforma.
 
 ---

@@ -292,7 +292,7 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Bottom Rights */}
         <div className="border-t border-purple-950 pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-purple-400/60">
-          <p>© 2026 NutrinK Tecnologia em Saúde Ltda. Todos os direitos reservados.</p>
+          <p>© 2026 NutrinK Tecnologia em Saúde Digital. Todos os direitos reservados.</p>
           <p className="flex items-center gap-1">
             <span>Desenvolvido para máxima precisão clínica com</span>
             <span className="text-fuchsia-400 font-bold">NUTRIA Copilot</span>
