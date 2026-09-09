@@ -565,5 +565,41 @@ Nossa equipe técnica, comercial e de suporte clínico está pronta para atender
 ---
 
 > **Nutria AI** • *O Cérebro Inteligente do NutrinK*`
+  },
+
+  faq: {
+    id: 'faq',
+    title: 'Perguntas Frequentes (FAQ)',
+    category: 'conteudos_sobre',
+    categoryLabel: 'CONTEÚDOS & SOBRE',
+    iconName: 'BookOpen',
+    shortDescription: 'Perguntas frequentes sobre prescrição magistral, cálculos TMB/GET, PWA e a inteligência NÚTRIA.',
+    markdownContent: `# ❓ Perguntas Frequentes sobre o NutrinK
+
+Tire suas dúvidas sobre as capacidades clínicas, funcionamento em PWA e inteligência artificial NÚTRIA do NutrinK.
+
+---
+
+### 1. O NutrinK funciona como software de prescrição magistral para nutrólogos e nutricionistas?
+**Sim.** A inteligência **NÚTRIA** sugere dosagens personalizadas de fitoterápicos, suplementos e fórmulas manipuladas com base nos exames de sangue e anamnese do paciente.
+
+---
+
+### 2. Como a plataforma realiza o cálculo de TMB e GET durante a consulta?
+O **NutrinK** aplica automaticamente equações validadas (como **Mifflin-St Jeor**), ajustando as constantes por sexo, idade, peso e nível de atividade física para entregar a meta calórica em segundos.
+
+---
+
+### 3. É possível utilizar o NutrinK como aplicativo PWA no celular e computador?
+**Sim.** O **NutrinK** é um PWA (*Progressive Web App*) totalmente responsivo que pode ser acessado direto no navegador ou instalado na tela inicial de qualquer dispositivo sem ocupar espaço de memória.
+
+---
+
+### 4. Quanto tempo leva para gerar um plano alimentar e conduta clínica com a NÚTRIA?
+Em menos de **2 minutos** a **NÚTRIA** estrutura o diagnóstico metabólico, a distribuição de macronutrientes, o plano alimentar e as tabelas de substituição equivalente.
+
+---
+
+> **Nutria AI** • *O Cérebro Inteligente do NutrinK*`
   }
 };

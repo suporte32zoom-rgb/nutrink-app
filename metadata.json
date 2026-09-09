@@ -1,6 +1,6 @@
 {
-  "name": "Remix NutrinK - NUTRIA Copiloto Clínico",
-  "description": "Cérebro central, inteligência artificial e secretária de alta performance do ecossistema NutrinK para nutricionistas e nutrólogos.",
+  "name": "NutrinK | Software para Nutricionistas e Nutrólogos com IA Clínica",
+  "description": "Plataforma clínica com IA para nutricionistas e médicos nutrólogos. Cálculos metabólicos (TMB/GET), prescrição magistral de fitoterápicos e planos alimentares com a NÚTRIA em menos de 2 minutos.",
   "requestFramePermissions": [
     "camera",
     "microphone"

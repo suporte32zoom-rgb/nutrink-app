@@ -176,6 +176,16 @@ export const Footer: React.FC<FooterProps> = ({
               </li>
               <li>
                 <button
+                  onClick={(e) => handleLinkClick('faq', e)}
+                  className="flex items-center gap-2 text-purple-200 hover:text-white transition-colors group text-left"
+                  id="footer-link-faq"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-purple-400 group-hover:text-fuchsia-400 transition-colors" />
+                  <span>Perguntas Frequentes (FAQ)</span>
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={(e) => handleLinkClick('acessar', e)}
                   className="flex items-center gap-2 text-purple-200 hover:text-white transition-colors group text-left"
                   id="footer-link-acessar"
