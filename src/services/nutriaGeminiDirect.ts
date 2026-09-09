@@ -517,73 +517,240 @@ export function formatGeminiContents(
  */
 export function detectOperationalAction(userInput: string, aiReply: string, params: NutriaCallParams): NutriaActionExecution | undefined {
   const lower = userInput.toLowerCase();
+  const patients = Array.isArray(params.patients) ? params.patients : [];
 
   // 1. Ação de cadastrar paciente
-  if (lower.includes('cadastrar paciente') || lower.includes('cadastre o paciente') || lower.includes('novo paciente')) {
-    const match = userInput.match(/(?:paciente|nome)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)*)/i);
-    const patientName = match ? match[1] : 'Novo Paciente';
+  if (lower.includes('cadastrar paciente') || lower.includes('cadastre o paciente') || lower.includes('novo paciente') || lower.includes('criar prontuário') || lower.includes('cadastrar a paciente')) {
+    const match = userInput.match(/(?:paciente|nome)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)*)/i)
+      || userInput.match(/cadastr(?:ar|e)\s+(?:o|a)?\s*(?:paciente)?\s*([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)*)/i);
+    const patientName = match ? match[1].trim() : 'Novo Paciente';
+    
+    const anthropo = extractMessageAnthropometrics(userInput);
+    const ageMatch = userInput.match(/(\d{1,3})\s*(?:anos|ano)/i);
+    const age = anthropo.age || (ageMatch ? parseInt(ageMatch[1], 10) : 30);
+    const weight = anthropo.weight || 70;
+    const height = anthropo.height || 170;
+    const gender = anthropo.gender || (lower.includes('mulher') || lower.includes('feminina') ? 'feminino' : 'masculino');
+    const objective = anthropo.objective || (lower.includes('emagrec') ? 'Emagrecimento' : lower.includes('hipertrof') ? 'Hipertrofia Muscular' : 'Acompanhamento Nutricional');
+
     return {
       type: 'patient_created',
       payload: {
         id: `pat-${Date.now()}`,
         name: patientName,
-        age: 30,
-        gender: 'masculino',
-        currentWeightKg: 70,
-        heightCm: 175,
-        objective: 'Acompanhamento Nutricional',
-        status: 'active',
+        age: age,
+        gender: gender,
+        currentWeightKg: weight,
+        initialWeightKg: weight,
+        targetWeightKg: weight,
+        heightCm: height,
+        objective: objective,
+        bodyFatPercentage: 20,
+        status: 'ativo',
         createdAt: new Date().toISOString()
       },
-      summary: `Paciente ${patientName} pré-cadastrado no prontuário.`
+      summary: `Paciente ${patientName} cadastrado(a) no prontuário.`
     };
   }
 
-  // 2. Ação de agendar consulta
-  if (lower.includes('agendar consulta') || lower.includes('agende consulta') || lower.includes('marcar consulta')) {
+  // 2. Ação de atualizar paciente
+  if (lower.includes('atualizar paciente') || lower.includes('atualize o peso') || lower.includes('atualize o prontuário') || lower.includes('mude o peso') || lower.includes('novo peso')) {
+    const anthropo = extractMessageAnthropometrics(userInput);
+    let targetName = params.activePatient?.name || '';
+    for (const p of patients) {
+      if (lower.includes(p.name.toLowerCase())) {
+        targetName = p.name;
+        break;
+      }
+    }
+    return {
+      type: 'patient_updated',
+      payload: {
+        patientName: targetName,
+        weightKg: anthropo.weight,
+        heightCm: anthropo.height,
+        objective: anthropo.objective
+      },
+      summary: `Prontuário de ${targetName || 'paciente'} atualizado.`
+    };
+  }
+
+  // 3. Ação de buscar prontuário
+  if (lower.includes('buscar prontuário') || lower.includes('busque o prontuário') || lower.includes('ver prontuário') || lower.includes('abrir prontuário') || lower.includes('prontuário de')) {
+    for (const p of patients) {
+      if (lower.includes(p.name.toLowerCase())) {
+        return {
+          type: 'patient_selected',
+          payload: { patientName: p.name, patientId: p.id },
+          summary: `Prontuário de ${p.name} selecionado.`
+        };
+      }
+    }
+  }
+
+  // 4. Ação de agendar consulta
+  if (lower.includes('agendar consulta') || lower.includes('agende consulta') || lower.includes('agende o paciente') || lower.includes('agende a paciente') || lower.includes('marcar consulta') || lower.includes('marque uma consulta')) {
+    let targetName = params.activePatient?.name || 'Consulta Nutricional';
+    for (const p of patients) {
+      if (lower.includes(p.name.toLowerCase())) {
+        targetName = p.name;
+        break;
+      }
+    }
+    
+    // Detecta horário (ex: 14h, 14:00, 15:30)
+    const timeMatch = userInput.match(/\b([012]?\d)(?:h|:([0-5]\d))\b/i) || userInput.match(/\bàs\s*([012]?\d(?::[0-5]\d)?)\b/i);
+    let time = '14:00';
+    if (timeMatch) {
+      const h = timeMatch[1].padStart(2, '0');
+      const m = timeMatch[2] || '00';
+      time = `${h}:${m}`;
+    }
+
+    // Detecta data
+    let date = new Date().toISOString().split('T')[0];
+    if (lower.includes('amanhã') || lower.includes('amanha')) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      date = tomorrow.toISOString().split('T')[0];
+    } else {
+      const dateMatch = userInput.match(/\b(\d{4}-\d{2}-\d{2})\b/) || userInput.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+      if (dateMatch) {
+        if (dateMatch[1] && dateMatch[1].includes('-')) {
+          date = dateMatch[1];
+        } else if (dateMatch[1] && dateMatch[2]) {
+          const d = dateMatch[1].padStart(2, '0');
+          const mo = dateMatch[2].padStart(2, '0');
+          const y = dateMatch[3] ? (dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3]) : '2026';
+          date = `${y}-${mo}-${d}`;
+        }
+      }
+    }
+
+    const modality = lower.includes('online') || lower.includes('video') || lower.includes('vídeo') || lower.includes('teleconsulta') ? 'online_video' : 'presencial_consultorio';
+
     return {
       type: 'appointment_scheduled',
       payload: {
         id: `apt-${Date.now()}`,
-        patientId: params.activePatient?.id || 'pat-1',
-        patientName: params.activePatient?.name || 'Consulta Nutricional',
-        date: new Date().toISOString().split('T')[0],
-        time: '14:00',
-        type: 'presencial',
-        status: 'confirmed',
-        modality: 'presencial',
-        value: 250
+        patientName: targetName,
+        date: date,
+        time: time,
+        type: 'retorno',
+        status: 'confirmada',
+        location: modality,
+        durationMinutes: 50,
+        price: 350
       },
-      summary: 'Consulta agendada no calendário NutrinK.'
+      summary: `Consulta agendada para ${targetName} em ${date} às ${time}.`
     };
   }
 
-  // 3. Ação de lançar financeiro
-  if (lower.includes('lançar receita') || lower.includes('lance uma receita') || lower.includes('registrar pagamento')) {
+  // 5. Ação de remarcar consulta
+  if (lower.includes('remarcar consulta') || lower.includes('remarque') || lower.includes('mudar horário') || lower.includes('mude o horário')) {
+    let targetName = params.activePatient?.name || '';
+    for (const p of patients) {
+      if (lower.includes(p.name.toLowerCase())) {
+        targetName = p.name;
+        break;
+      }
+    }
+    const timeMatch = userInput.match(/\b([012]?\d)(?:h|:([0-5]\d))\b/i) || userInput.match(/\bàs\s*([012]?\d(?::[0-5]\d)?)\b/i);
+    let time = '15:00';
+    if (timeMatch) {
+      const h = timeMatch[1].padStart(2, '0');
+      const m = timeMatch[2] || '00';
+      time = `${h}:${m}`;
+    }
+    return {
+      type: 'appointment_rescheduled',
+      payload: {
+        patientName: targetName,
+        newTime: time
+      },
+      summary: `Consulta de ${targetName || 'paciente'} remarcada para às ${time}.`
+    };
+  }
+
+  // 6. Ação de cancelar consulta
+  if (lower.includes('cancelar consulta') || lower.includes('cancele a consulta') || lower.includes('desmarcar')) {
+    let targetName = params.activePatient?.name || '';
+    for (const p of patients) {
+      if (lower.includes(p.name.toLowerCase())) {
+        targetName = p.name;
+        break;
+      }
+    }
+    return {
+      type: 'appointment_cancelled',
+      payload: {
+        patientName: targetName
+      },
+      summary: `Consulta de ${targetName || 'paciente'} cancelada.`
+    };
+  }
+
+  // 7. Ação de listar horários ou agenda
+  if (lower.includes('horários livres') || lower.includes('horários disponíveis') || lower.includes('agenda de hoje') || lower.includes('ver agenda')) {
+    return {
+      type: 'NAVIGATE_TAB',
+      payload: { tab: 'calendar' },
+      summary: 'Grade de horários e agendamentos da Agenda.'
+    };
+  }
+
+  // 8. Ação de lançar financeiro
+  if (lower.includes('lançar receita') || lower.includes('lance uma receita') || lower.includes('lançar despesa') || lower.includes('lance uma despesa') || lower.includes('registrar pagamento')) {
     const valueMatch = userInput.match(/(?:r\$|reais)\s*(\d+(?:[.,]\d+)?)/i) || userInput.match(/(\d+(?:[.,]\d+)?)\s*(?:reais|via pix)/i);
-    const amount = valueMatch ? parseFloat(valueMatch[1].replace(',', '.')) : 250;
+    const amount = valueMatch ? parseFloat(valueMatch[1].replace(',', '.')) : 350;
+    const isExpense = lower.includes('despesa') || lower.includes('gasto') || lower.includes('custo') || lower.includes('saída');
     return {
       type: 'transaction_logged',
       payload: {
         id: `tx-${Date.now()}`,
-        description: 'Consulta Nutricional - NUTRIA',
-        type: 'income',
+        description: isExpense ? 'Despesa Operacional' : 'Consulta Nutricional - NUTRIA',
+        type: isExpense ? 'despesa' : 'receita',
         amount: amount,
-        category: 'consultas',
+        category: isExpense ? 'operacional' : 'consultas',
         date: new Date().toISOString().split('T')[0],
-        status: 'paid',
+        status: 'pago',
         paymentMethod: 'pix'
       },
-      summary: `Receita de R$ ${amount.toFixed(2)} lançada no Financeiro.`
+      summary: `${isExpense ? 'Despesa' : 'Receita'} de R$ ${amount.toFixed(2)} lançada no Financeiro.`
     };
   }
 
-  // 4. Ação de navegação para planos
+  // 9. Ação de consultar financeiro
+  if (lower.includes('faturamento') || lower.includes('balanço financeiro') || lower.includes('saldo do consultório') || lower.includes('fluxo de caixa')) {
+    return {
+      type: 'NAVIGATE_TAB',
+      payload: { tab: 'finance' },
+      summary: 'Painel financeiro e fluxo de caixa consolidado.'
+    };
+  }
+
+  // 10. Ações de navegação para seções
   if (lower.includes('abrir planos') || lower.includes('ver planos') || lower.includes('assinar') || lower.includes('upgrade')) {
     return {
       type: 'NAVIGATE_TAB',
       payload: { tab: 'plans' },
       summary: 'Abertura do painel de Planos e Assinaturas.'
+    };
+  }
+
+  if (lower.includes('abrir nutricalc') || lower.includes('ir para o nutricalc') || lower.includes('calcular tmb no nutricalc')) {
+    return {
+      type: 'NAVIGATE_TAB',
+      payload: { tab: 'nutricalc' },
+      summary: 'Navegação para o módulo NutriCalc.'
+    };
+  }
+
+  if (lower.includes('abrir pacientes') || lower.includes('ir para pacientes') || lower.includes('lista de pacientes')) {
+    return {
+      type: 'NAVIGATE_TAB',
+      payload: { tab: 'patients' },
+      summary: 'Navegação para o módulo de Pacientes & Prontuários.'
     };
   }
 

@@ -49,12 +49,17 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({
   // Forçar scroll no topo assim que o modal for aberto
   useEffect(() => {
     if (isOpen) {
-      if (modalRef.current) {
-        modalRef.current.scrollTop = 0;
-      }
-      if (backdropRef.current) {
-        backdropRef.current.scrollTop = 0;
-      }
+      const resetScroll = () => {
+        if (modalRef.current) {
+          modalRef.current.scrollTop = 0;
+        }
+        if (backdropRef.current) {
+          backdropRef.current.scrollTop = 0;
+        }
+      };
+      resetScroll();
+      requestAnimationFrame(resetScroll);
+      setTimeout(resetScroll, 50);
     }
   }, [isOpen]);
 

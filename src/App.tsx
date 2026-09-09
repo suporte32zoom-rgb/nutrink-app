@@ -645,30 +645,240 @@ Seu acesso ao **Plano ${plan === 'premium_anual' ? 'Premium Anual (R$ 399,00 à 
       let actionExecuted: NutriaActionExecution | undefined = result.actionExecuted;
 
       if (actionExecuted) {
-        // Apply action to application state
-        if ((actionExecuted.type === 'patient_created' || actionExecuted.type === 'ADD_PATIENT') && actionExecuted.payload) {
-          const newPat: Patient = actionExecuted.payload;
-          setPatients(prev => [newPat, ...prev]);
-        } else if ((actionExecuted.type === 'appointment_scheduled' || actionExecuted.type === 'SCHEDULE_APPOINTMENT') && actionExecuted.payload) {
-          const newApt: Appointment = actionExecuted.payload;
-          setAppointments(prev => [...prev, newApt]);
-        } else if ((actionExecuted.type === 'transaction_logged' || actionExecuted.type === 'ADD_FINANCE_TRANSACTION') && actionExecuted.payload) {
-          const newTx: FinancialTransaction = actionExecuted.payload;
-          setTransactions(prev => [newTx, ...prev]);
-        } else if ((actionExecuted.type === 'meal_plan_generated' || actionExecuted.type === 'UPDATE_MEAL_PLAN') && actionExecuted.payload) {
-          const { patientId, mealPlan } = actionExecuted.payload;
-          setPatients(prev => prev.map(p => {
-            if (p.id === patientId || p.name.toLowerCase() === activePatient?.name.toLowerCase()) {
-              return { ...p, mealPlan };
-            }
-            return p;
-          }));
-        } else if (actionExecuted.type === 'NAVIGATE_TAB' && actionExecuted.payload?.tab) {
-          setCurrentTab(actionExecuted.payload.tab);
+        const payload: any = actionExecuted.payload || {};
+
+        // 1. AÇÃO: CADASTRAR NOVO PACIENTE
+        if (actionExecuted.type === 'patient_created' || actionExecuted.type === 'ADD_PATIENT') {
+          const rawWeight = parseFloat(payload.currentWeightKg || payload.initialWeightKg || payload.weightKg || payload.pesoKg || 70);
+          const rawHeight = parseFloat(payload.heightCm || payload.alturaCm || 170);
+          const rawAge = parseInt(payload.age || payload.idade || 30, 10);
+          const rawGender: Gender = payload.gender === 'feminino' ? 'feminino' : 'masculino';
+          const heightM = rawHeight / 100;
+          const bmi = heightM > 0 ? parseFloat((rawWeight / (heightM * heightM)).toFixed(1)) : 22.5;
+          const tmb = rawGender === 'masculino'
+            ? Math.round(10 * rawWeight + 6.25 * rawHeight - 5 * rawAge + 5)
+            : Math.round(10 * rawWeight + 6.25 * rawHeight - 5 * rawAge - 161);
+          const getVal = Math.round(tmb * 1.4);
+
+          const newPat: Patient = {
+            id: payload.id || `pat-${Date.now()}`,
+            name: payload.name || payload.nome || 'Novo Paciente',
+            age: rawAge,
+            gender: rawGender,
+            heightCm: rawHeight,
+            initialWeightKg: rawWeight,
+            currentWeightKg: rawWeight,
+            targetWeightKg: parseFloat(payload.targetWeightKg || rawWeight),
+            bmi: bmi,
+            bodyFatPercentage: parseFloat(payload.bodyFatPercentage || payload.percentualGordura || 20),
+            objective: payload.objective || payload.objetivo || 'Acompanhamento Nutricional',
+            activityFactor: 1.4,
+            tmb: tmb,
+            get: getVal,
+            status: 'ativo',
+            phone: payload.phone || payload.telefone || '(11) 99999-0000',
+            email: payload.email || `${(payload.name || 'paciente').toLowerCase().replace(/\s+/g, '')}@email.com`,
+            notes: payload.notes || payload.observacoes || 'Cadastrado via copiloto autônomo NÚTRIA.',
+            tags: [payload.objective || 'nutricao_clinica'],
+            createdAt: new Date().toISOString().split('T')[0],
+            anamnese: {
+              clinicalHistory: payload.notes || 'Sem restrições relatadas.',
+              foodAllergiesAndIntolerances: 'Nenhuma alergia relatada.',
+              currentMedicationsAndSupplements: 'Nenhum medicamento informado.',
+              waterIntakeLiters: 2.5
+            },
+            evolutionHistory: [
+              {
+                id: `ev-${Date.now()}`,
+                date: new Date().toISOString().split('T')[0],
+                weightKg: rawWeight,
+                heightCm: rawHeight,
+                bmi: bmi,
+                bodyFatPercentage: parseFloat(payload.bodyFatPercentage || 20),
+                notes: 'Avaliação inicial cadastrada pela NÚTRIA.'
+              }
+            ]
+          };
+
+          setPatients(prev => {
+            const updated = [newPat, ...prev.filter(p => p.id !== newPat.id)];
+            try { localStorage.setItem('nutrink_patients_data', JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+          setSelectedPatientId(newPat.id);
+        } 
+        
+        // 2. AÇÃO: ATUALIZAR PRONTUÁRIO DE PACIENTE
+        else if (actionExecuted.type === 'patient_updated' || actionExecuted.type === 'UPDATE_PATIENT') {
+          const pName = (payload.patientName || payload.nomePaciente || '').toLowerCase();
+          setPatients(prev => {
+            const updated = prev.map(p => {
+              if (p.id === payload.patientId || (pName && p.name.toLowerCase().includes(pName))) {
+                const newW = payload.weightKg ? parseFloat(payload.weightKg) : p.currentWeightKg;
+                const newH = payload.heightCm ? parseFloat(payload.heightCm) : p.heightCm;
+                const newBf = payload.bodyFatPercentage ? parseFloat(payload.bodyFatPercentage) : p.bodyFatPercentage;
+                const heightM = newH / 100;
+                const newBmi = heightM > 0 ? parseFloat((newW / (heightM * heightM)).toFixed(1)) : p.bmi;
+
+                const newHistory = [
+                  ...(p.evolutionHistory || []),
+                  {
+                    id: `ev-${Date.now()}`,
+                    date: new Date().toISOString().split('T')[0],
+                    weightKg: newW,
+                    heightCm: newH,
+                    bmi: newBmi,
+                    bodyFatPercentage: newBf,
+                    notes: payload.notes || payload.observacoes || 'Evolução registrada pela NÚTRIA'
+                  }
+                ];
+
+                return {
+                  ...p,
+                  currentWeightKg: newW,
+                  heightCm: newH,
+                  bodyFatPercentage: newBf,
+                  bmi: newBmi,
+                  objective: payload.objective || p.objective,
+                  notes: payload.notes ? `${p.notes}\n${payload.notes}` : p.notes,
+                  evolutionHistory: newHistory
+                };
+              }
+              return p;
+            });
+            try { localStorage.setItem('nutrink_patients_data', JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        }
+
+        // 3. AÇÃO: BUSCAR E SELECIONAR PACIENTE
+        else if (actionExecuted.type === 'patient_selected' || actionExecuted.type === 'SELECT_PATIENT') {
+          const pName = (payload.patientName || '').toLowerCase();
+          const found = patients.find(p => p.id === payload.patientId || (pName && p.name.toLowerCase().includes(pName)));
+          if (found) {
+            setSelectedPatientId(found.id);
+            setCurrentTab('patients');
+          }
+        }
+
+        // 4. AÇÃO: AGENDAR CONSULTA
+        else if (actionExecuted.type === 'appointment_scheduled' || actionExecuted.type === 'SCHEDULE_APPOINTMENT') {
+          const newApt: Appointment = {
+            id: payload.id || `apt-${Date.now()}`,
+            patientId: payload.patientId || (activePatient ? activePatient.id : 'pat-general'),
+            patientName: payload.patientName || (activePatient ? activePatient.name : 'Paciente NutrinK'),
+            date: payload.date || new Date().toISOString().split('T')[0],
+            time: payload.time || '14:00',
+            durationMinutes: payload.durationMinutes || 50,
+            type: payload.type || 'retorno',
+            status: payload.status || 'confirmada',
+            location: payload.location || 'presencial_consultorio',
+            modality: payload.location === 'online_video' ? 'online' : 'presencial',
+            price: payload.price || payload.value || 350,
+            notes: payload.notes || 'Agendamento registrado pelo copiloto NÚTRIA.'
+          };
+          setAppointments(prev => {
+            const updated = [...prev, newApt];
+            try { localStorage.setItem('nutrink_appointments_data', JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        }
+
+        // 5. AÇÃO: REMARCAR CONSULTA
+        else if (actionExecuted.type === 'appointment_rescheduled' || actionExecuted.type === 'RESCHEDULE_APPOINTMENT') {
+          const pName = (payload.patientName || '').toLowerCase();
+          setAppointments(prev => {
+            const updated = prev.map(a => {
+              if (pName && a.patientName && a.patientName.toLowerCase().includes(pName)) {
+                return {
+                  ...a,
+                  date: payload.newDate || a.date,
+                  time: payload.newTime || a.time,
+                  notes: payload.reason ? `${a.notes} (Remarcada: ${payload.reason})` : a.notes
+                };
+              }
+              return a;
+            });
+            try { localStorage.setItem('nutrink_appointments_data', JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        }
+
+        // 6. AÇÃO: CANCELAR CONSULTA
+        else if (actionExecuted.type === 'appointment_cancelled' || actionExecuted.type === 'CANCEL_APPOINTMENT') {
+          const pName = (payload.patientName || '').toLowerCase();
+          setAppointments(prev => {
+            const updated = prev.map(a => {
+              if (pName && a.patientName && a.patientName.toLowerCase().includes(pName)) {
+                return {
+                  ...a,
+                  status: 'cancelada' as any,
+                  notes: payload.reason ? `${a.notes} (Cancelada: ${payload.reason})` : a.notes
+                };
+              }
+              return a;
+            });
+            try { localStorage.setItem('nutrink_appointments_data', JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        }
+
+        // 7. AÇÃO: LANÇAR FINANCEIRO
+        else if (actionExecuted.type === 'transaction_logged' || actionExecuted.type === 'ADD_FINANCE_TRANSACTION') {
+          const newTx: FinancialTransaction = {
+            id: payload.id || `tx-${Date.now()}`,
+            description: payload.description || payload.descricao || 'Consulta Nutricional',
+            type: payload.type === 'despesa' ? 'despesa' : 'receita',
+            category: payload.category || payload.categoria || 'consultas',
+            amount: parseFloat(payload.amount || payload.valor || 350),
+            date: payload.date || payload.data || new Date().toISOString().split('T')[0],
+            status: 'pago',
+            paymentMethod: payload.paymentMethod || payload.metodoPagamento || 'pix',
+            patientName: payload.patientName || payload.nomePaciente || undefined
+          };
+          setTransactions(prev => {
+            const updated = [newTx, ...prev];
+            try { localStorage.setItem('nutrink_transactions_data', JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        }
+
+        // 8. AÇÃO: GERAR / ATUALIZAR PLANO ALIMENTAR
+        else if (actionExecuted.type === 'meal_plan_generated' || actionExecuted.type === 'GENERATE_MEAL_PLAN' || actionExecuted.type === 'UPDATE_MEAL_PLAN') {
+          const pName = (payload.patientName || '').toLowerCase();
+          const targetKcal = payload.targetCalories || 2000;
+          const newPlan = {
+            id: `mp-${Date.now()}`,
+            title: payload.title || `Plano Nutricional - ${targetKcal} kcal`,
+            createdAt: new Date().toISOString().split('T')[0],
+            targetCalories: targetKcal,
+            proteinGrams: payload.targetProteinGrams || Math.round((targetKcal * 0.25) / 4),
+            carbsGrams: payload.targetCarbsGrams || Math.round((targetKcal * 0.50) / 4),
+            fatGrams: payload.targetFatGrams || Math.round((targetKcal * 0.25) / 9),
+            hydrationGoalLiters: payload.hydrationGoalLiters || 3.0,
+            generalGuidelines: payload.generalGuidelines || 'Fracionar a ingestão hídrica. Mastigar calmamente.',
+            meals: []
+          };
+
+          setPatients(prev => {
+            const updated = prev.map(p => {
+              if (p.id === payload.patientId || (pName && p.name.toLowerCase().includes(pName)) || (activePatient && p.id === activePatient.id)) {
+                return { ...p, mealPlan: newPlan as any };
+              }
+              return p;
+            });
+            try { localStorage.setItem('nutrink_patients_data', JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        } 
+        
+        // 9. NAVEGAÇÃO E MODAIS
+        else if (actionExecuted.type === 'NAVIGATE_TAB' && payload?.tab) {
+          setCurrentTab(payload.tab);
         } else if (actionExecuted.type === 'OPEN_SUBSCRIPTION_MODAL') {
           setIsSubscriptionModalOpen(true);
-        } else if (actionExecuted.type === 'OPEN_INSTITUTIONAL_DOC' && actionExecuted.payload?.pageId) {
-          setActiveInstitutionalPageId(actionExecuted.payload.pageId);
+        } else if (actionExecuted.type === 'OPEN_INSTITUTIONAL_DOC' && payload?.pageId) {
+          setActiveInstitutionalPageId(payload.pageId);
           setIsInstitutionalModalOpen(true);
         } else if (actionExecuted.type === 'OPEN_LOGIN_MODAL') {
           setIsLoginModalOpen(true);
