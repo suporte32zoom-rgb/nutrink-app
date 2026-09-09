@@ -143,19 +143,27 @@ export function getClientGeminiApiKey(): string {
  */
 export const NUTRIA_SYSTEM_INSTRUCTION = `Você é a NÚTRIA, a inteligência artificial especialista máxima do sistema NutrinK em Nutrição Clínica, Nutrologia, Nutrição Esportiva, Funcional, Pediatria e Geriatria, além de assistente inteligente para gestão do consultório.
 
-DIRETRIZES DE CONDUTA CLÍNICA OBRIGATÓRIA (NÚTRIA):
-1. APLICAÇÃO DE DÉFICIT CALÓRICO OBRIGATÓRIO PARA EMAGRECIMENTO:
+DIRETRIZ RIGOROSA DE SEXO E PERSONALIZAÇÃO CLÍNICA (NÚTRIA):
+1. IDENTIFICAÇÃO DE SEXO E FÓRMULA CORRETA (MIFFLIN-ST JEOR):
+   - Identifique com precisão absoluta se o paciente é MASCULINO ou FEMININO antes de calcular a TMB (a partir da mensagem informada ou dos dados cadastrais).
+   - Para Mulheres (Sexo Feminino), utilize ESTRITAMENTE a fórmula Mifflin-St Jeor Feminina:
+     TMB = (10 × Peso em kg) + (6.25 × Altura em cm) - (5 × Idade em anos) - 161
+     NUNCA use a constante masculina (+ 5) para mulheres.
+   - Para Homens (Sexo Masculino), utilize:
+     TMB = (10 × Peso em kg) + (6.25 × Altura em cm) - (5 × Idade em anos) + 5
+
+2. APLICAÇÃO DE DÉFICIT CALÓRICO OBRIGATÓRIO PARA EMAGRECIMENTO:
    - Sempre que o paciente apresentar queixa de dificuldade para perder peso, gordura abdominal, sobrepeso, obesidade ou objetivo de emagrecimento/definição corporal, APLICAR OBRIGATORIAMENTE DÉFICIT CALÓRICO (reduzir de 300 a 600 kcal do Gasto Energético Total - GET calculado).
    - NUNCA prescreva valor normocalórico (GET total) quando o objetivo envolver perda de gordura ou queixa de sobrepeso/gordura abdominal. Exiba claramente: TMB calculada, GET total, Déficit Calórico aplicado (ex: -500 kcal/dia) e Meta Calórica Efetiva do Plano.
 
-2. TRATAMENTO OBRIGATÓRIO DE EXAMES ALTERADOS (PRESCRIÇÃO MAGISTRAL & SUPORTE SUPLEMENTAR):
-   - SEMPRE que houver exames laboratoriais informados na mensagem ou no prontuário com valores alterados ou subótimos, você DEVE OBRIGATORIAMENTE incluir uma seção dedicada de "Prescrição Magistral e Suporte Suplementar".
-   - Aborde diretamente CADA marcador alterado (ex: Vitamina D baixa/insuficiente, Vitamina B12 subótima, Resistência à Insulina/HOMA-IR elevado, Glicemia alterada, Triglicerídeos elevados, LDL-c alto, Ferritina elevada/baixa, esteatose hepática, TSH/T4L alterados).
-   - Para CADA alteração encontrada, indique com rigor científico:
-     * Princípio ativo / substância exata (com forma química de alta biodisponibilidade, ex: Colecalciferol, Metilcobalamina, Coenzima Q10, Ômega-3 EPA/DHA concentrado, Picolinato de Cromo, Berberina, N-Acetilcisteína, Magnésio Quelato/Inositol).
-     * Dosagem diária exata (mg, mcg, UI, g).
-     * Posologia detalhada e melhor horário de tomada (ex: tomar 1 dose junto ao almoço com refeição gordurosa; tomar 1 dose 30 min antes do jantar; tomar à noite ao deitar).
-     * Tempo de uso / duração do protocolo (ex: uso por 60 a 90 dias com reavaliação laboratorial subsequente).
+3. TRATAMENTO PERSONALIZADO DE SINTOMAS E EXAMES (PROIBIDO REPETIR FÓRMULAS PADRONIZADAS):
+   - PROIBIDO REPETIR FÓRMULAS PADRONIZADAS OU TEMPLATES FIXOS. A Prescrição Magistral deve ser 100% personalizada e individualizada para cada caso, queixas, sintomas específicos e exames laboratoriais apresentados.
+   - Climatério / Menopausa: Se a paciente estiver na menopausa, climatério ou relatar sintomas vasomotores (fogachos / ondas de calor), insônia, ansiedade, retenção hídrica ou alterações de humor, OBRIGATORIAMENTE prescreva fitoterápicos e compostos específicos direcionados (Ex: *Trifolium pratense* 40 a 80 mg padronizado em isoflavonas, *Cimicifuga racemosa* 20 a 40 mg, *Crocus sativus* 15 a 30 mg para humor/compulsão, Magnésio Inositol 250 a 400 mg à noite para sono/ansiedade, *Cact-Nea* ou Hibisco para drenagem/retenção).
+   - Ferritina Baixa (< 30 ng/mL ou subótima): OBRIGATORIAMENTE prescreva Ferro Bisglicinato (quelato de alta absorção, 30 a 60 mg de ferro elementar) associado à Vitamina C (Ácido Ascórbico 200 a 500 mg para maximizar absorção duodenal), com posologia longe de cálcio/café/chás.
+   - Vitamina D Baixa / Insuficiente (< 30 ng/mL): Prescreva Colecalciferol (Vitamina D3) 5.000 a 7.000 UI/dia associada à Vitamina K2 (MK-7) 100 mcg em veículo lipídico junto a refeição gordurosa.
+   - Vitamina B12 Subótima (< 500 pg/mL): Prescreva Metilcobalamina 1.000 mcg sublingual associada a Metilfolato 400 mcg.
+   - Resistência Insulínica / HOMA-IR Elevado / Glicemia Alterada: Prescreva Berberina 300 a 500 mg, Picolinato de Cromo 200 a 400 mcg e/ou Ácido Alfa-Lipóico 200 a 300 mg antes das principais refeições.
+   - Para CADA alteração ou sintoma identificado, especifique: princípio ativo na melhor forma química, dosagem exata, posologia e melhor horário de tomada, e tempo de protocolo com reavaliação.
 
 DIRETRIZES OBRIGATÓRIAS DE ATUAÇÃO E FORMATAÇÃO VISUAL LIMPA:
 - PROIBIÇÃO ABSOLUTA DE SINTAXE LATEX OU CIFRÕES MATEMÁTICOS:
@@ -243,11 +251,11 @@ export function extractMessageAnthropometrics(message: string): {
     if (a >= 1 && a <= 120) result.age = a;
   }
 
-  // Gênero
-  if (text.match(/\b(homem|masculino|rapaz|senhor|macho)\b/i)) {
-    result.gender = 'masculino';
-  } else if (text.match(/\b(mulher|feminino|moca|moça|senhora|femea|fêmea)\b/i)) {
+  // Gênero com alta sensibilidade para masculino vs feminino
+  if (text.match(/\b(mulher|feminino|moca|moça|senhora|femea|fêmea|menopausa|climat[eé]rio|fogacho|gestante|lactante|m[aã]e|filha|paciente feminina)\b/i)) {
     result.gender = 'feminino';
+  } else if (text.match(/\b(homem|masculino|rapaz|senhor|macho|pai|filho|paciente masculino)\b/i)) {
+    result.gender = 'masculino';
   }
 
   // Objetivo
@@ -585,10 +593,56 @@ export function generateFallbackClinicalResponse(userInput: string, params: Nutr
   const asksExams = lower.includes('exame') || lower.includes('vitamina') || lower.includes('b12') || lower.includes('glicemia') || lower.includes('homa') || lower.includes('triglic') || lower.includes('ferritina') || lower.includes('colesterol') || lower.includes('tsh');
 
   if (asksPlan || (asksMetabolism && asksPlan) || (asksMetabolism && lower.includes('80kg'))) {
+    // Detecção de Condições Específicas
+    const hasMenopause = lower.includes('menopausa') || lower.includes('climat') || lower.includes('fogacho') || lower.includes('calor') || lower.includes('fogachos');
+    const hasLowFerritin = lower.includes('ferritina') || lower.includes('anemia') || lower.includes('ferro');
+
+    let supplementBlock = '';
+    if (hasMenopause) {
+      supplementBlock += `
+- **Suporte para Climatério, Fogachos & Equilíbrio Neuroendócrino:**
+  - *Trifolium pratense* (Isoflavonas padronizadas a 40%): **60 mg**
+  - *Cimicifuga racemosa* (Extrato seco): **30 mg**
+  - *Crocus sativus* (Extrato padronizado de Açafrão): **20 mg**
+  - Magnésio Inositol: **350 mg**
+  - *Posologia:* Tomar 1 dose pela manhã e 1 dose do Magnésio Inositol à noite 45 min antes de deitar por 90 dias. Alivia fogachos e melhora o sono.
+`;
+    }
+
+    if (hasLowFerritin) {
+      supplementBlock += `
+- **Tratamento Específico para Ferritina Baixa (< 30 ng/mL):**
+  - Ferro Bisglicinato (Quelato de Alta Biodisponibilidade): **45 mg de Ferro elementar**
+  - Vitamina C (Ácido Ascórbico): **300 mg** *(Maximiza a absorção duodenal do ferro)*
+  - Metilfolato: **400 mcg**
+  - *Posologia:* Tomar 1 dose via oral em jejum ou 30 minutos antes do almoço com água/suco cítrico. Afastar de laticínios, café e chás. Uso por 90 dias com reavaliação.
+`;
+    }
+
+    if (!hasMenopause && !hasLowFerritin) {
+      supplementBlock = `
+- **Suporte Metabólico e Otimização da Insulina:**
+  - Picolinato de Cromo: 200 mcg
+  - Coenzima Q10 (Ubiquinona): 100 mg
+  - Magnésio Quelato / Dimalato: 250 mg
+  - *Posologia:* Tomar 1 dose via oral no almoço por 60 a 90 dias.
+
+- **Otimização de Vitamina D3 e Imunidade:**
+  - Colecalciferol (Vitamina D3): 2.000 UI a 5.000 UI
+  - Menatetrenona (Vitamina K2 MK-7): 100 mcg
+  - *Posologia:* Tomar 1 dose pela manhã ou junto à principal refeição gordurosa.
+
+- **Adequação de Vitamina B12 (quando subótima):**
+  - Metilcobalamina (Sublingual): 1.000 mcg
+  - Metilfolato: 400 mcg
+  - *Posologia:* 1 comprimido sublingual pela manhã em jejum por 60 dias.
+`;
+    }
+
     // Entrega COMPLETA: Avaliação Metabólica + Plano Alimentar Estruturado + Tabela de Substituição + Prescrição Magistral
     reply = `### 🧬 Avaliação Energética e Metabólica (Mifflin-St Jeor)
 **Paciente:** ${name} | **Idade:** ${age} anos | **Estatura:** ${height} cm | **Peso Utilizado:** **${weight} kg** *(Dados da Solicitação)*
-**Objetivo:** ${objective}${isWeightLoss ? ' (Estratégia de Emagrecimento com Déficit Calórico)' : ''}
+**Gênero:** ${isMale ? 'Masculino' : 'Feminino'} | **Objetivo:** ${objective}${isWeightLoss ? ' (Estratégia de Emagrecimento com Déficit Calórico)' : ''}
 
 | Parâmetro Metabólico | Valor Calculado | Protocolo / Fórmula |
 | :--- | :--- | :--- |
@@ -613,7 +667,7 @@ export function generateFallbackClinicalResponse(userInput: string, params: Nutr
 
 | Refeição | Horário | Alimentos & Medidas Caseiras | Gramaturas Exatas | Macros da Refeição |
 | :--- | :--- | :--- | :--- | :--- |
-| **1. Café da Manhã (Desjejum)** | 07:00 | • Ovos inteiros mexidos ou cozidos (3 unid.)<br>• Pão 100% integral (2 fatias)<br>• Fruta fresca: Mamão papaia (1/2 unid.) ou Morangos frescos<br>• Sementes de chia (1 colher de sobremesa)<br>• Café preto ou chá verde sem açúcar (200ml) | • Ovos: 150g<br>• Pão Integral: 50g<br>• Fruta: 100g<br>• Chia: 10g | **~420 kcal**<br>P: 28g • C: 38g • G: 16g |
+| **1. Café da Manhã (Desjejum)** | 07:00 | • Ovos inteiros mexidos ou cozidos (${isMale ? '3 unid.' : '2 unid.'})<br>• Pão 100% integral (${isMale ? '2 fatias' : '1 fatia grande'})<br>• Fruta fresca: Mamão papaia ou Morangos frescos<br>• Sementes de chia (1 colher de sobremesa)<br>• Café preto ou chá verde sem açúcar (200ml) | • Ovos: ${isMale ? '150g' : '100g'}<br>• Pão Integral: 50g<br>• Fruta: 100g<br>• Chia: 10g | **~${isMale ? '420' : '340'} kcal**<br>P: ${isMale ? '28g' : '20g'} • C: 35g • G: 14g |
 | **2. Lanche da Manhã (Colação)** | 10:00 | • Iogurte natural desnatado / grego zero (1 pote)<br>• Mix de castanhas e nozes picadas (1 colher de sopa)<br>• Maçã pequena com casca (1 unid.) | • Iogurte: 160g<br>• Castanhas: 15g<br>• Fruta: 100g | **~200 kcal**<br>P: 13g • C: 22g • G: 7g |
 | **3. Almoço** | 12:30 | • Peito de frango grelhado ou filé de tilápia (1 filé grande)<br>• Arroz integral cozido (4 colheres de sopa rasas)<br>• Feijão carioca em concha média (1 concha)<br>• Legumes no vapor (brócolis, abobrinha, cenoura)<br>• Salada crua de folhas verdes à vontade (rúcula, alface, agrião)<br>• Azeite de oliva extravirgem (1 colher de sobremesa) | • Proteína: 160g<br>• Arroz: 100g<br>• Feijão: 90g<br>• Legumes: 130g<br>• Folhas: à vontade<br>• Azeite: 7ml | **~540 kcal**<br>P: 48g • C: 52g • G: 14g |
 | **4. Lanche da Tarde (Pré-Treino)** | 16:30 | • Whey Protein Isolado ou Concentrado 80% (1 scoop)<br>• Banana prata fatiada (1 unid.)<br>• Aveia em flocos finos (1 colher de sopa cheia)<br>• Canela em pó a gosto + Água gelada (200ml) | • Whey: 30g<br>• Banana: 80g<br>• Aveia: 20g | **~280 kcal**<br>P: 26g • C: 34g • G: 3g |
@@ -644,24 +698,8 @@ export function generateFallbackClinicalResponse(userInput: string, params: Nutr
 
 ---
 
-### 💊 Prescrição Magistral e Suporte Suplementar (Conduta Clínica)
-
-- **Suporte Metabólico e Otimização da Insulina:**
-  - Picolinato de Cromo: 200 mcg
-  - Coenzima Q10 (Ubiquinona): 100 mg
-  - Magnésio Quelato / Dimalato: 250 mg
-  - *Posologia:* Tomar 1 dose via oral no almoço por 60 a 90 dias.
-
-- **Otimização de Vitamina D3 e Imunidade:**
-  - Colecalciferol (Vitamina D3): 2.000 UI a 5.000 UI
-  - Menatetrenona (Vitamina K2 MK-7): 100 mcg
-  - *Posologia:* Tomar 1 dose pela manhã ou junto à principal refeição gordurosa.
-
-- **Adequação de Vitamina B12 (quando subótima):**
-  - Metilcobalamina (Sublingual): 1.000 mcg
-  - Metilfolato: 400 mcg
-  - *Posologia:* 1 comprimido sublingual pela manhã em jejum por 60 dias.
-
+### 💊 Prescrição Magistral e Suporte Suplementar (Conduta Clínica Personalizada)
+${supplementBlock}
 ---
 
 *Prescrição estruturada pela **NÚTRIA** para o consultório NutrinK.*`;
