@@ -145,7 +145,7 @@ const inMemoryPayments = new Map<string, {
 app.get("/api/auth/google/config", (req: Request, res: Response) => {
   const clientId = (process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "").trim();
   res.json({
-    clientId: clientId || "389274819273-v738291nutrinkapp.apps.googleusercontent.com",
+    clientId: clientId || "493300215926-9h58hp029m3fdbucbrhlt25ajh4miibs.apps.googleusercontent.com",
     isConfigured: !!clientId,
     scope: "openid email profile",
   });
