@@ -11,18 +11,18 @@ export interface InstitutionalPage {
 export const INSTITUTIONAL_PAGES: Record<string, InstitutionalPage> = {
   inicio: {
     id: 'inicio',
-    title: 'Início (Topo) / Ecossistema NutrinK',
+    title: 'Início / Ecossistema NutrinK',
     category: 'produto_recursos',
     categoryLabel: 'PRODUTO & RECURSOS',
     iconName: 'Home',
     shortDescription: 'Visão geral do ecossistema integrado para nutricionistas e nutrólogos.',
-    markdownContent: `# 🌿 Ecossistema NutrinK • A Plataforma Definitiva de Inteligência Clínica
+    markdownContent: `# Ecossistema NutrinK • A Plataforma Definitiva de Inteligência Clínica
 
 O **NutrinK** é o software completo em nuvem projetado especificamente para **nutricionistas e nutrólogos** que buscam aliar excelência no atendimento ao paciente, precisão científica rigorosa e máxima produtividade em seus consultórios e clínicas.
 
 ---
 
-## 🌟 Pilares do Ecossistema Integrado
+## Pilares do Ecossistema Integrado
 
 | Módulo Estrutural | Finalidade Primária | Impacto Clínico & Operacional |
 | :--- | :--- | :--- |
@@ -34,7 +34,7 @@ O **NutrinK** é o software completo em nuvem projetado especificamente para **n
 
 ---
 
-## 🚀 Como o NutrinK Potencializa seu Consultório
+## Como o NutrinK Potencializa seu Consultório
 
 1. **Atendimento Ágil e Sem Fricção**: Opere o prontuário via comandos por voz ou texto com o copiloto NUTRIA, sem desviar o olhar do paciente.
 2. **Cálculos Metabólicos Instantâneos**: Adequação automática de macros e micronutrientes em segundos, com base no gasto energético individual.
@@ -53,13 +53,13 @@ O **NutrinK** é o software completo em nuvem projetado especificamente para **n
     categoryLabel: 'PRODUTO & RECURSOS',
     iconName: 'Layers',
     shortDescription: 'Apresentação detalhada dos módulos: Prontuário Eletrônico, Agenda Inteligente, Gestão Financeira e Copiloto NUTRIA AI.',
-    markdownContent: `# 🛠️ Recursos & Módulos Completos do Software NutrinK
+    markdownContent: `# Recursos & Módulos Completos do Software NutrinK
 
 O **NutrinK** consolida em uma única interface moderna todos os pilares essenciais para a rotina de consultório de **Nutricionistas Clínicos, Esportivos, Funcionais e Médicos Nutrólogos**.
 
 ---
 
-## 1. 📋 Prontuário Eletrônico & Gestão de Pacientes
+## 1. Prontuário Eletrônico & Gestão de Pacientes
 - **Anamnese Clínica Abrangente**: Histórico de patologias pregressas, antecedentes familiares, alergias e intolerâncias alimentares, histórico farmacológico, padrão de sono, hidratação diária e funcionamento intestinal (classificação padronizada pela **Escala de Formato de Fezes de Bristol**).
 - **Módulo Antropométrico & Composição Corporal**:
   * Registro de peso atual, peso habitual, meta ponderal e estatura.
@@ -71,7 +71,7 @@ O **NutrinK** consolida em uma única interface moderna todos os pilares essenci
 
 ---
 
-## 2. 📅 Agenda Clínica Inteligente & Teleconsultas
+## 2. Agenda Clínica Inteligente & Teleconsultas
 - **Grade Horária Flexível**: Visualização dinâmica por dia, semana e mês com código de cores intuitivo por status (*Confirmada, Pendente, Realizada, Remarcada, Cancelada*).
 - **Modalidades de Atendimento**: Gestão integrada de consultas presenciais no consultório e teleconsultas por videoconferência.
 - **Histórico e Retornos**: Agendamento automático de consultas de retorno com alertas de prazo clínico ideal para reavaliação física.
@@ -79,7 +79,7 @@ O **NutrinK** consolida em uma única interface moderna todos os pilares essenci
 
 ---
 
-## 3. 💼 Gestão Financeira & Fluxo de Caixa
+## 3. Gestão Financeira & Fluxo de Caixa
 - **Controle de Honorários e Receitas**: Registro de consultas avulsas, pacotes trimestrais/semestrais e planos de acompanhamento continuado.
 - **Múltiplas Formas de Pagamento**: Suporte nativo a lançamentos em **PIX, Cartão de Crédito, Cartão de Débito, Transferência Bancária e Dinheiro**.
 - **Gestão de Despesas do Consultório**: Lançamento de custos fixos (aluguel de sala, condomínio, licenças) e custos variáveis (cursos, marketing, insumos).
@@ -87,7 +87,7 @@ O **NutrinK** consolida em uma única interface moderna todos os pilares essenci
 
 ---
 
-## 4. 🧮 NutriCalc Pro & Motor Bioenergético
+## 4. NutriCalc Pro & Motor Bioenergético
 - **Cálculo da Taxa Metabólica Basal (TMB)** com as fórmulas científicas mais conceituadas:
   * *Mifflin-St Jeor (1990)*
   * *Harris-Benedict Revisada (Roza & Shizgal, 1984)*
@@ -98,7 +98,7 @@ O **NutrinK** consolida em uma única interface moderna todos os pilares essenci
 
 ---
 
-## 5. 🤖 Copiloto NUTRIA AI (Inteligência Artificial Clínica)
+## 5. Copiloto NUTRIA AI (Inteligência Artificial Clínica)
 - **Digitação Hands-Free por Voz**: Transcrição inteligente de dados falados durante a avaliação para preenchimento automático do prontuário.
 - **Geração de Pareceres e Relatórios**: Elaboração de pareceres clínicos estruturados com embasamento nas diretrizes da ESPEN, ASPEN e BRASPEN.
 - **Ajustes Dietoterápicos em Tempo Real**: Sugestões de combinações de alimentos e macronutrientes adequadas ao objetivo do paciente.
@@ -115,30 +115,30 @@ O **NutrinK** consolida em uma única interface moderna todos os pilares essenci
     categoryLabel: 'PRODUTO & RECURSOS',
     iconName: 'CreditCard',
     shortDescription: 'Tabela comparativa do Plano Gratuito, Premium Mensal R$ 39,00 e Premium Anual R$ 399,00 à vista via PIX.',
-    markdownContent: `# 💳 Planos, Valores & Condições de Assinatura NutrinK
+    markdownContent: `# Planos, Valores & Condições de Assinatura NutrinK
 
 Escolha o plano ideal para a escala do seu consultório ou clínica. Pagamento 100% à vista e instantâneo via **PIX com QR Code e Copia e Cola** com liberação imediata.
 
 ---
 
-## 📊 Tabela Comparativa de Planos
+## Tabela Comparativa de Planos
 
 | Recursos & Funcionalidades | Plano Gratuito (Free) | Premium Mensal | Premium Anual *(Melhor Valor)* |
 | :--- | :--- | :--- | :--- |
 | **Investimento À Vista** | **R$ 0,00** | **R$ 39,00 / mês (à vista)** | **R$ 399,00 / ano (à vista)** |
 | **Forma de Pagamento** | — | **PIX Instantâneo (QR Code)** | **PIX Instantâneo (QR Code)** |
-| **Economia** | — | — | 🎁 **2 Meses Grátis** (R$ 69,00 de economia) |
-| **Consultas com Copiloto NUTRIA AI** | 30 mensagens / dia | ⚡ **ILIMITADAS** | ⚡ **ILIMITADAS** |
-| **Cadastro de Pacientes & Prontuários** | Até 10 pacientes | 🚀 **ILIMITADOS** | 🚀 **ILIMITADOS** |
+| **Economia** | — | — | **2 Meses Grátis** (R$ 69,00 de economia) |
+| **Consultas com Copiloto NUTRIA AI** | 30 mensagens / dia | **ILIMITADAS** | **ILIMITADAS** |
+| **Cadastro de Pacientes & Prontuários** | Até 10 pacientes | **ILIMITADOS** | **ILIMITADOS** |
 | **Agenda Clínica Inteligente** | Recursos básicos | Grade completa + Retornos | Grade completa + Sincronização |
 | **Gestão Financeira & Fluxo de Caixa** | Registro básico | Completo com DRE | Completo + Exportação Contábil |
 | **NutriCalc Pro (Todas as Equações)** | Fórmulas básicas | Todas as fórmulas científicas | Todas as fórmulas + Protocolos |
 | **Geração de Pareceres & Impressão** | Marca d'água básica | Sem marca d'água | Com logotipo e identidade visual |
-| **Nível de Suporte Técnico** | E-mail comunitário | Prioritário (horário comercial) | 🌟 **VIP WhatsApp & E-mail 24/7** |
+| **Nível de Suporte Técnico** | E-mail comunitário | Prioritário (horário comercial) | **VIP WhatsApp & E-mail 24/7** |
 
 ---
 
-## 💎 Vantagens dos Planos Premium
+## Vantagens dos Planos Premium
 
 - **Atendimento Ilimitado**: Utilize o copiloto NUTRIA sem restrições diárias de mensagens para todos os seus pacientes.
 - **Escalabilidade Total**: Cadastre novos prontuários sem teto de pacientes ou armazenamento.
@@ -156,13 +156,13 @@ Escolha o plano ideal para a escala do seu consultório ou clínica. Pagamento 1
     categoryLabel: 'CONTEÚDOS & SOBRE',
     iconName: 'Info',
     shortDescription: 'Apresenta a visão institucional do software, ressaltando a automação de rotinas para profissionais de saúde e ganho de produtividade.',
-    markdownContent: `# 🏛️ Sobre o NutrinK • A Revolução da Prática Clínica em Nutrição
+    markdownContent: `# Sobre o NutrinK • A Revolução da Prática Clínica em Nutrição
 
 O **NutrinK** nasceu com um propósito claro: eliminar a sobrecarga de tarefas burocráticas e manuais que historicamente consom até 60% do tempo de atendimento de nutricionistas e nutrólogos.
 
 ---
 
-## 🎯 Nossa Missão, Visão e Valores
+## Nossa Missão, Visão e Valores
 
 - **Missão**: Fornecer a mais avançada tecnologia de inteligência clínica e gestão de consultórios, permitindo que o profissional de saúde dedique seu tempo ao que realmente transforma vidas: o acolhimento humano, a escuta ativa e o raciocínio clínico.
 - **Visão**: Ser a plataforma padrão ouro de referência científica e tecnológica em nutrição e medicina metabólica no Brasil.
@@ -174,7 +174,7 @@ O **NutrinK** nasceu com um propósito claro: eliminar a sobrecarga de tarefas b
 
 ---
 
-## 💡 Por Que Escolher o NutrinK?
+## Por Que Escolher o NutrinK?
 
 1. **Inteligência Artificial Verdadeiramente Especializada**:
    - A NUTRIA AI não é um assistente genérico. Ela é calibrada com tabelas oficiais de composição de alimentos (TACO, TBCA), diretrizes de macronutrientes da SBAN, ESPEN e consensos de nutrologia.
@@ -197,36 +197,36 @@ O **NutrinK** nasceu com um propósito claro: eliminar a sobrecarga de tarefas b
     categoryLabel: 'CONTEÚDOS & SOBRE',
     iconName: 'BookOpen',
     shortDescription: 'Equações científicas utilizadas (Harris-Benedict 1984, Mifflin-St Jeor, Cunningham, FAO/OMS), fatores de atividade física e validações clínicas de macronutrientes.',
-    markdownContent: `# 🔬 Fundamentação Científica & Metodologia de Cálculos do NutrinK
+    markdownContent: `# Fundamentação Científica & Metodologia de Cálculos do NutrinK
 
 O motor de processamento bioenergético do **NutrinK (NutriCalc Pro)** foi desenvolvido sob rigoroso escrutínio metodológico, empregando exclusivamente equações preditivas validadas e recomendadas pelas principais sociedades internacionais de nutrição e metabologia.
 
 ---
 
-## 1. 📐 Equações Preditivas da Taxa Metabólica Basal (TMB)
+## 1. Equações Preditivas da Taxa Metabólica Basal (TMB)
 
-### A. Mifflin-St Jeor (1990) *(Recomendação Primária para População Geral e Sobrepeso)*
+### A. Mifflin-St Jeor (1990) (Recomendação Primária para População Geral e Sobrepeso)
 Validada pela *Academy of Nutrition and Dietetics* como a mais fidedigna para indivíduos eutróficos e com sobrepeso/obesidade:
 - **Homens:**
-  $$\\text{TMB} = (10 \\times \\text{Peso [kg]}) + (6.25 \\times \\text{Altura [cm]}) - (5 \\times \\text{Idade [anos]}) + 5$$
+  TMB = (10 × Peso em kg) + (6.25 × Altura em cm) - (5 × Idade em anos) + 5
 - **Mulheres:**
-  $$\\text{TMB} = (10 \\times \\text{Peso [kg]}) + (6.25 \\times \\text{Altura [cm]}) - (5 \\times \\text{Idade [anos]}) - 161$$
+  TMB = (10 × Peso em kg) + (6.25 × Altura em cm) - (5 × Idade em anos) - 161
 
 ---
 
-### B. Cunningham (1980) *(Padrão Ouro para Atletas e Indivíduos Ativos)*
+### B. Cunningham (1980) (Padrão Ouro para Atletas e Indivíduos Ativos)
 Ideal quando a composição corporal foi mensurada por bioimpedância ou dobras cutâneas, baseando o cálculo na Massa Livre de Gordura (MLG):
 - **Homens e Mulheres:**
-  $$\\text{TMB} = 500 + (22 \\times \\text{Massa Livre de Gordura [kg]})$$
+  TMB = 500 + (22 × Massa Livre de Gordura em kg)
 
 ---
 
 ### C. Harris-Benedict Revisada (Roza & Shizgal, 1984)
 Revisão metodológica da clássica fórmula de 1919 com calibração moderna:
 - **Homens:**
-  $$\\text{TMB} = 88.362 + (13.397 \\times \\text{Peso}) + (4.799 \\times \\text{Altura}) - (5.677 \\times \\text{Idade})$$
+  TMB = 88.362 + (13.397 × Peso em kg) + (4.799 × Altura em cm) - (5.677 × Idade em anos)
 - **Mulheres:**
-  $$\\text{TMB} = 447.593 + (9.247 \\times \\text{Peso}) + (3.098 \\times \\text{Altura}) - (4.330 \\times \\text{Idade})$$
+  TMB = 447.593 + (9.247 × Peso em kg) + (3.098 × Altura em cm) - (4.330 × Idade em anos)
 
 ---
 
@@ -235,11 +235,11 @@ Equação recomendada pela Organização Mundial da Saúde baseada em faixas et�
 
 ---
 
-## 2. ⚡ Gasto Energético Total (GET) e Nível de Atividade Física (NAF)
+## 2. Gasto Energético Total (GET) e Nível de Atividade Física (NAF)
 
 O Gasto Energético Total é calculado multiplicando-se a TMB pelo fator correspondente ao estilo de vida e volume de treinos:
 
-$$\\text{GET} = \\text{TMB} \\times \\text{NAF}$$
+GET = TMB × NAF
 
 | Grau de Atividade Física | Fator NAF | Descrição do Perfil e Frequência |
 | :--- | :--- | :--- |
@@ -251,7 +251,7 @@ $$\\text{GET} = \\text{TMB} \\times \\text{NAF}$$
 
 ---
 
-## 3. 🥩 Validações Clínicas de Fracionamento de Macronutrientes
+## 3. Validações Clínicas de Fracionamento de Macronutrientes
 
 O NutrinK adota parâmetros balizados pelos consensos da **SBAN, ESPEN, ISSN e Diretrizes da Sociedade Brasileira de Diabetes (SBD)**:
 
@@ -267,7 +267,7 @@ O NutrinK adota parâmetros balizados pelos consensos da **SBAN, ESPEN, ISSN e D
 
 ---
 
-## 4. 📚 Referências Bibliográficas Consultadas
+## 4. Referências Bibliográficas Consultadas
 
 1. *Mifflin MD, St Jeor ST, et al. A new predictive equation for resting energy expenditure in healthy individuals. Am J Clin Nutr. 1990;51(2):241-7.*
 2. *Cunningham JJ. A reanalysis of body mass and body composition data in female and male subjects. Am J Clin Nutr. 1980;33(11):2372-4.*
@@ -288,30 +288,30 @@ O NutrinK adota parâmetros balizados pelos consensos da **SBAN, ESPEN, ISSN e D
     categoryLabel: 'CONTEÚDOS & SOBRE',
     iconName: 'Award',
     shortDescription: 'Depoimentos de nutricionistas e nutrólogos que utilizam a plataforma.',
-    markdownContent: `# 🏆 Histórias de Sucesso com o NutrinK
+    markdownContent: `# Histórias de Sucesso com o NutrinK
 
 Mais de **3.800 profissionais de saúde em todo o Brasil** transformaram suas rotinas clínicas e multiplicaram a retenção de pacientes com o NutrinK.
 
 ---
 
-## 💬 O Que Dizem os Especialistas
+## O Que Dizem os Especialistas
 
-### 👩‍⚕️ Dra. Mariana Fonseca • Nutricionista Clínica & Funcional (CRN-3 32.110/SP)
+### Dra. Mariana Fonseca • Nutricionista Clínica & Funcional (CRN-3 32.110/SP)
 > *"Antes do NutrinK, eu passava as noites de domingo montando cardápios e ajustando planilhas de micronutrientes. Com o copiloto Nutria, consigo estruturar toda a conduta e o plano durante os últimos 15 minutos da consulta. Meus pacientes saem do consultório com o PDF na mão e a retenção aumentou em 45%."*
 
 ---
 
-### 👨‍⚕️ Dr. Roberto Alencar • Médico Nutrólogo (CRM-RJ 89.442)
+### Dr. Roberto Alencar • Médico Nutrólogo (CRM-RJ 89.442)
 > *"Na nutrologia de alta performance, a interpretação de marcadores hormonais e lipídicos combinados com Cunningham faz toda a diferença. O NutriCalc Pro e os relatórios clínicos da Nutria são impecáveis, com formatação médica clara e rigor técnico irrepreensível."*
 
 ---
 
-### 🥗 Dra. Camila Pires • Nutrição Esportiva (CRN-8 19.854/PR)
+### Dra. Camila Pires • Nutrição Esportiva (CRN-8 19.854/PR)
 > *"A funcionalidade de comandos por voz é surreal. Enquanto avalio a bioimpedância do atleta, vou falando os dados e a Nutria já lança tudo no prontuário e calcula os deltas de gordura e massa magra. É produtividade pura."*
 
 ---
 
-## 📈 Indicadores de Impacto Clínico
+## Indicadores de Impacto Clínico
 
 | Indicador Clínico | Média Registrada | Benefício Direto |
 | :--- | :--- | :--- |
@@ -331,13 +331,13 @@ Mais de **3.800 profissionais de saúde em todo o Brasil** transformaram suas ro
     categoryLabel: 'CONTEÚDOS & SOBRE',
     iconName: 'LogIn',
     shortDescription: 'Portal de acesso e autenticação segura para profissionais.',
-    markdownContent: `# 🔐 Portal de Acesso & Autenticação Segura NutrinK
+    markdownContent: `# Portal de Acesso & Autenticação Segura NutrinK
 
 O acesso ao NutrinK é protegido por camadas rigorosas de segurança digital e autenticação criptográfica de ponta a ponta.
 
 ---
 
-## 🔑 Recursos de Autenticação Disponíveis
+## Recursos de Autenticação Disponíveis
 
 1. **Login com E-mail Profissional & Senha Segura**:
    - Senhas com hash criptográfico seguro (bcrypt / Argon2) e verificação de complexidade.
@@ -348,7 +348,7 @@ O acesso ao NutrinK é protegido por camadas rigorosas de segurança digital e a
 
 ---
 
-## 🛡️ Protocolos de Proteção Ativos
+## Protocolos de Proteção Ativos
 
 - **Criptografia TLS 1.3 / HTTPS**: Tráfego 100% blindado contra interceptações.
 - **Proteção de Sessão**: Encerramento automático por inatividade para salvaguardar dados de saúde no consultório.
@@ -366,7 +366,7 @@ O acesso ao NutrinK é protegido por camadas rigorosas de segurança digital e a
     categoryLabel: 'CENTRAL LEGAL & CONTATO',
     iconName: 'ShieldCheck',
     shortDescription: 'Criptografia de ponta a ponta (AES-256/TLS 1.3), coleta e tratamento estrito de prontuários sob a Lei nº 13.709/2018 e direitos do titular.',
-    markdownContent: `# 🛡️ Política de Privacidade & Proteção de Dados (Lei nº 13.709/2018 - LGPD)
+    markdownContent: `# Política de Privacidade & Proteção de Dados (Lei nº 13.709/2018 - LGPD)
 
 *Última atualização: Agosto de 2026 • Versão Homologada 2.4*
 
@@ -374,7 +374,7 @@ A **NutrinK Soluções Tecnológicas em Saúde Ltda.** (doravante "NutrinK") est
 
 ---
 
-## 1. 📜 Bases Legais e Coleta Estrita de Prontuários
+## 1. Bases Legais e Coleta Estrita de Prontuários
 O tratamento de dados na plataforma NutrinK obedece rigorosamente às disposições da **Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018)**:
 
 1. **Dados do Profissional de Saúde**:
@@ -387,7 +387,7 @@ O tratamento de dados na plataforma NutrinK obedece rigorosamente às disposiç�
 
 ---
 
-## 2. 🔐 Padrões de Segurança & Criptografia de Ponta a Ponta
+## 2. Padrões de Segurança & Criptografia de Ponta a Ponta
 
 O NutrinK adota os mais avançados protocolos internacionais de cibersegurança:
 
@@ -401,7 +401,7 @@ O NutrinK adota os mais avançados protocolos internacionais de cibersegurança:
 
 ---
 
-## 3. ⚖️ Direitos do Titular dos Dados (Profissional e Paciente)
+## 3. Direitos do Titular dos Dados (Profissional e Paciente)
 Em estrita conformidade com o **Artigo 18 da LGPD**, o titular dos dados pode exercer a qualquer momento:
 
 1. **Confirmação e Acesso**: Confirmação da existência de tratamento e acesso facilitado aos dados armazenados.
@@ -412,7 +412,7 @@ Em estrita conformidade com o **Artigo 18 da LGPD**, o titular dos dados pode ex
 
 ---
 
-## 4. 👨‍⚖️ Encarregado de Proteção de Dados (DPO) & Contato
+## 4. Encarregado de Proteção de Dados (DPO) & Contato
 Para exercer seus direitos de titular, dirimir dúvidas sobre esta política ou solicitar relatórios de impacto à proteção de dados (RIPD):
 
 - **Encarregado (DPO):** Comitê de Segurança e Privacidade NutrinK
@@ -431,7 +431,7 @@ Para exercer seus direitos de titular, dirimir dúvidas sobre esta política ou 
     categoryLabel: 'CENTRAL LEGAL & CONTATO',
     iconName: 'FileText',
     shortDescription: 'Licença SaaS para profissionais de saúde, responsabilidade técnica exclusiva do CRN/CRM e condições dos Planos Mensal R$ 39,90 e Anual R$ 399,90.',
-    markdownContent: `# 📑 Termos e Condições Gerais de Uso da Plataforma NutrinK
+    markdownContent: `# Termos e Condições Gerais de Uso da Plataforma NutrinK
 
 *Última atualização: Agosto de 2026 • Versão 3.1*
 
@@ -439,38 +439,38 @@ Bem-vindo ao **NutrinK**. Ao criar uma conta, assinar um plano ou utilizar qualq
 
 ---
 
-## 1. 🩺 Objeto do Contrato & Licença de Uso
+## 1. Objeto do Contrato & Licença de Uso
 1.1. O NutrinK é uma plataforma tecnológica de software como serviço (**SaaS - Software as a Service**), concebida para auxiliar nutricionistas e médicos nutrólogos na gestão clínica, prontuário eletrônico, agendamento de consultas, organização financeira e cálculos nutricionais.  
 1.2. A NutrinK concede ao usuário uma licença de uso temporária, não exclusiva, intransferível e revogável, vinculada ao plano contratado (**Gratuito, Premium Mensal ou Premium Anual**).
 
 ---
 
-## 2. 👩‍⚕️ Responsabilidade Técnica & Autonomia Profissional
+## 2. Responsabilidade Técnica & Autonomia Profissional
 2.1. **EXCLUSIVIDADE DO PROFISSIONAL HABILITADO**: O diagnóstico clínico-nutricional, a anamnese conclusiva, a prescrição dietoterápica, a indicação de suplementação e a solicitação de exames laboratoriais são de **responsabilidade técnica exclusiva, pessoal e intransferível do profissional devidamente registrado no Conselho Regional de Nutricionistas (CRN) ou Conselho Regional de Medicina (CRM)**.  
 2.2. **PAPEL DO COPILOTO NUTRIA AI**: As ferramentas de inteligência artificial (**NUTRIA**) e calculadoras bioenergéticas atuam estritamente como **instrumentos consultivos de suporte à decisão clínica e automação operacional**. O NutrinK não pratica atos privativos de saúde nem substitui o julgamento crítico e a relação médico/nutricionista-paciente.
 
 ---
 
-## 3. 💳 Planos, Faturamento, Renovação e Cancelamento
+## 3. Planos, Faturamento, Renovação e Cancelamento
 
 | Modalidade de Plano | Valor da Assinatura | Ciclo de Cobrança | Política de Renovação e Cancelamento |
 | :--- | :--- | :--- | :--- |
 | **Plano Gratuito (Free)** | **R$ 0,00** | Indeterminado | Acesso com limites diários de mensagens e até 10 pacientes |
 | **Premium Mensal** | **R$ 39,90 / mês** | Mensal Recorrente | Cobrança mensal automática; cancelamento a qualquer momento sem multa |
-| **Premium Anual** | **R$ 399,90 / ano** | Anual *(~R$ 33,32/mês)* | 🎁 **2 Meses Grátis**; renovação anual automática; cancelamento simplificado |
+| **Premium Anual** | **R$ 399,90 / ano** | Anual *(~R$ 33,32/mês)* | **2 Meses Grátis**; renovação anual automática; cancelamento simplificado |
 
 3.1. **Direito de Arrependimento**: Nos termos do Artigo 49 do Código de Defesa do Consumidor (Lei nº 8.078/1990), o contratante tem o prazo de **7 (sete) dias corridos** a contar da primeira assinatura para solicitar o cancelamento com estorno de **100% do valor pago**.  
 3.2. **Cancelamento do Serviço**: O cancelamento pode ser efetuado diretamente pelo painel do usuário no aplicativo ou mediante solicitação por e-mail a \`suporte@nutrink.com.br\`. O acesso aos recursos Premium permanecerá ativo até o final do ciclo já faturado.
 
 ---
 
-## 4. 🔒 Propriedade Intelectual & Integridade do Software
+## 4. Propriedade Intelectual & Integridade do Software
 4.1. Todos os algoritmos, marcas, logotipos, interfaces gráficas, bancos de dados, textos e códigos da plataforma pertencem exclusivamente à **NutrinK Soluções Tecnológicas em Saúde Ltda.**  
 4.2. É estritamente proibida qualquer tentativa de engenharia reversa, descompilação, cópia, espelhamento ou comercialização não autorizada da plataforma.
 
 ---
 
-## 5. ⚖️ Legislação Aplicável e Foro
+## 5. Legislação Aplicável e Foro
 Este contrato é regido pelas leis da República Federativa do Brasil. As partes elegem o foro da **Comarca de São Paulo / SP** como o único competente para dirimir eventuais controvérsias decorrentes destes Termos.
 
 ---
@@ -485,7 +485,7 @@ Este contrato é regido pelas leis da República Federativa do Brasil. As partes
     categoryLabel: 'CENTRAL LEGAL & CONTATO',
     iconName: 'AlertTriangle',
     shortDescription: 'Diretrizes de uso ético da IA (Nutria AI), proibição de compartilhamento de credenciais e integridade do ecossistema.',
-    markdownContent: `# ⚠️ Política de Uso Aceitável da Plataforma e do Copiloto NUTRIA AI
+    markdownContent: `# Política de Uso Aceitável da Plataforma e do Copiloto NUTRIA AI
 
 *Última atualização: Agosto de 2026*
 
@@ -493,12 +493,12 @@ Esta Política de Uso Aceitável estabelece os padrões éticos, legais e operac
 
 ---
 
-## 1. 🎯 Finalidade da Inteligência Artificial NUTRIA
+## 1. Finalidade da Inteligência Artificial NUTRIA
 A **NUTRIA AI** foi desenvolvida para apoiar profissionais de saúde com cálculos metabólicos de precisão, organização de dados clínicos e sumarização de condutas baseadas em evidências científicas. O uso da plataforma deve refletir o mais elevado padrão de integridade profissional.
 
 ---
 
-## 2. ⛔ Condutas Expressamente Vedadas
+## 2. Condutas Expressamente Vedadas
 
 É expressamente proibido a qualquer usuário:
 
@@ -510,7 +510,7 @@ A **NUTRIA AI** foi desenvolvida para apoiar profissionais de saúde com cálcul
 
 ---
 
-## 3. 🛡️ Monitoramento, Auditoria e Penalidades
+## 3. Monitoramento, Auditoria e Penalidades
 3.1. A NutrinK realiza auditorias automatizadas de integridade para detectar volumes anômalos de requisições e potenciais violações de segurança.  
 3.2. O descumprimento desta política sujeitará o infrator a:
 - Advertência formal por e-mail;
@@ -530,24 +530,24 @@ A **NUTRIA AI** foi desenvolvida para apoiar profissionais de saúde com cálcul
     categoryLabel: 'CENTRAL LEGAL & CONTATO',
     iconName: 'Headphones',
     shortDescription: 'Horários de atendimento, e-mail oficial (suporte@nutrink.com.br) e canais de ajuda técnica.',
-    markdownContent: `# 📞 Central de Atendimento & Suporte Técnico NutrinK
+    markdownContent: `# Central de Atendimento & Suporte Técnico NutrinK
 
 Nossa equipe técnica, comercial e de suporte clínico está pronta para atender você com agilidade e eficiência.
 
 ---
 
-## 📬 Canais Oficiais de Atendimento
+## Canais Oficiais de Atendimento
 
 | Canal de Contato | Finalidade Principal | Tempo Médio de Resposta |
 | :--- | :--- | :--- |
-| 💬 **WhatsApp Suporte VIP (Assinantes Premium)** | Atendimento em tempo real para dúvidas operacionais e suporte de consultório | **< 15 minutos** *(horário comercial)* |
-| 📧 **E-mail de Suporte Geral** | \`suporte@nutrink.com.br\` | **Até 4 horas úteis** |
-| 🤝 **Comercial & Parcerias Clínicas** | \`comercial@nutrink.com.br\` | **Até 24 horas úteis** |
-| 🔒 **Privacidade & DPO (LGPD)** | \`dpo@nutrink.com.br\` | **Até 15 dias úteis** |
+| **WhatsApp Suporte VIP (Assinantes Premium)** | Atendimento em tempo real para dúvidas operacionais e suporte de consultório | **< 15 minutos** *(horário comercial)* |
+| **E-mail de Suporte Geral** | \`suporte@nutrink.com.br\` | **Até 4 horas úteis** |
+| **Comercial & Parcerias Clínicas** | \`comercial@nutrink.com.br\` | **Até 24 horas úteis** |
+| **Privacidade & DPO (LGPD)** | \`dpo@nutrink.com.br\` | **Até 15 dias úteis** |
 
 ---
 
-## ⏰ Horários de Funcionamento
+## Horários de Funcionamento
 
 - **Atendimento Humano:** Segunda a Sexta-feira, das **08:00 às 20:00** (Horário de Brasília)
 - **Atendimento aos Sábados:** Das **08:00 às 14:00**
@@ -555,7 +555,7 @@ Nossa equipe técnica, comercial e de suporte clínico está pronta para atender
 
 ---
 
-## 🏢 Dados Institucionais da Empresa
+## Dados Institucionais da Empresa
 
 - **Razão Social:** NutrinK Soluções Tecnológicas em Saúde Ltda.
 - **CNPJ:** 48.912.834/0001-90
@@ -574,7 +574,7 @@ Nossa equipe técnica, comercial e de suporte clínico está pronta para atender
     categoryLabel: 'CONTEÚDOS & SOBRE',
     iconName: 'BookOpen',
     shortDescription: 'Perguntas frequentes sobre a plataforma, NÚTRIA, PWA, pagamentos e segurança.',
-    markdownContent: `# ❓ Perguntas Frequentes sobre o NutrinK
+    markdownContent: `# Perguntas Frequentes sobre o NutrinK
 
 Tire suas dúvidas sobre o funcionamento da plataforma, recursos da inteligência NÚTRIA, instalação PWA, pagamentos e segurança.
 

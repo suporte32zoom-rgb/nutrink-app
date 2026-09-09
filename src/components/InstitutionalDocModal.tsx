@@ -30,6 +30,7 @@ import {
   Share2
 } from 'lucide-react';
 import { INSTITUTIONAL_PAGES, InstitutionalPage } from '../data/institutionalPages';
+import { cleanMathAndLatex } from '../utils/cleanMarkdown';
 
 interface InstitutionalDocModalProps {
   isOpen: boolean;
@@ -109,7 +110,7 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
   };
 
   const handleCopyMarkdown = () => {
-    navigator.clipboard.writeText(currentPage.markdownContent);
+    navigator.clipboard.writeText(cleanMathAndLatex(currentPage.markdownContent));
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
@@ -164,10 +165,10 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
         </head>
         <body>
           <div class="header-banner">
-            <div class="brand-title">🌿 NutrinK • Documentação Oficial & Governança Clínica</div>
+            <div class="brand-title">NutrinK • Documentação Oficial & Governança Clínica</div>
             <div class="doc-tag">Categoria: ${currentPage.categoryLabel} | Documento: ${currentPage.title}</div>
           </div>
-          <pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px;">${currentPage.markdownContent}</pre>
+          <pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px;">${cleanMathAndLatex(currentPage.markdownContent)}</pre>
           <div class="footer-note">
             NutrinK Soluções Tecnológicas em Saúde Ltda. • CNPJ 48.912.834/0001-90 • Documento emitido para fins institucionais e regulatórios.
           </div>
@@ -179,7 +180,7 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
   };
 
   const handleDownload = () => {
-    const blob = new Blob([currentPage.markdownContent], { type: 'text/markdown;charset=utf-8;' });
+    const blob = new Blob([cleanMathAndLatex(currentPage.markdownContent)], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -570,7 +571,7 @@ export const InstitutionalDocModal: React.FC<InstitutionalDocModalProps> = ({
                       )
                     }}
                   >
-                    {currentPage.markdownContent}
+                    {cleanMathAndLatex(currentPage.markdownContent)}
                   </ReactMarkdown>
                 </div>
               </div>
