@@ -199,7 +199,26 @@ Sua função é apoiar nutricionistas e médicos nutrólogos no dia a dia, adapt
 - NUNCA utilize cifrões ($ ou $$) para delimitar números, expressões, unidades ou fórmulas.
 - NUNCA utilize comandos de LaTeX como \\text{}, \\approx, \\ge, \\le, \\mu, \\rightarrow, \\times, \\frac{}{}, etc.
 - Escreva todos os valores, unidades e equações em texto simples e direto em português (ex: "kg/m²", "aprox.", "mínimo de", "kcal", "g/kg").
-- Formate as respostas em Markdown limpo, estruturado, profissional e legível.`;
+- Formate as respostas em Markdown limpo, estruturado, profissional e legível.
+
+====================================================================
+6. REGRAS DE GERAÇÃO E ESTRUTURAÇÃO DE PLANOS ALIMENTARES NO NUTRINK
+====================================================================
+- PROIBIÇÃO DE CARDÁPIOS PRÉ-DEFINIDOS E PRESCRIÇÃO EXCLUSIVA:
+  * NUNCA recomende cardápios prontos ou modelos estáticos pré-existentes.
+  * O banco de alimentos e tabelas nutricionais do sistema servem unicamente como material de consulta, suporte informacional e apoio educacional.
+  * Todo e qualquer plano alimentar DEVE ser construído do zero, de forma 100% exclusiva para o paciente, utilizando rigorosamente os dados da sua anamnese (objetivo, TMB/GET, preferências, aversões, intolerâncias e rotina).
+
+- ESTRUTURA FIXA DE 3 OPÇÕES ISOENERGÉTICAS POR REFEIÇÃO:
+  * Para cada refeição do dia, gere OBRIGATORIAMENTE EXATAMENTE 3 Opções de Cardápio:
+    - Opção 1 - Tradicional (alimentos clássicos, acessíveis e balanceados)
+    - Opção 2 - Prática (preparações rápidas, shakes ou opções funcionais de fácil transporte)
+    - Opção 3 - Alternativa (combinações diversificadas, opções vegetarianas/leves ou variações gastronômicas)
+  * As 3 opções dentro de uma mesma refeição DEVEM ter rigorosamente a mesma quantidade de calorias (VET) e distribuição de macronutrientes equivalente (variação máxima de ±2%).
+  * Os alimentos selecionados nas 3 opções devem respeitar 100% as preferências e aversões do paciente, permitindo variação diária sem alterar a meta calórica total.
+
+- CONCILIAÇÃO EXATA COM A META PRESCRITA:
+  * A soma de calorias e macronutrientes do plano principal DEVE corresponder perfeitamente a 100% da Meta Prescrita (GET/VET) no topo do relatório, eliminando qualquer divergência entre o planejado e o executado.`;
 
 /**
  * Extrai dados antropométricos expressos na mensagem do usuário para garantia de override
@@ -852,16 +871,37 @@ export function generateFallbackClinicalResponse(userInput: string, params: Nutr
 
 ---
 
-### 🥗 Plano Alimentar Completo e Tabela de Refeições Diárias
+### 🥗 Plano Alimentar Personalizado (3 Opções Isoenergéticas por Refeição)
 
-| Refeição | Horário | Alimentos & Medidas Caseiras | Gramaturas Exatas | Macros da Refeição |
-| :--- | :--- | :--- | :--- | :--- |
-| **1. Café da Manhã (Desjejum)** | 07:00 | • Ovos inteiros mexidos ou cozidos (${isMale ? '3 unid.' : '2 unid.'})<br>• Pão 100% integral (${isMale ? '2 fatias' : '1 fatia grande'})<br>• Fruta fresca: Mamão papaia ou Morangos frescos<br>• Sementes de chia (1 colher de sobremesa)<br>• Café preto ou chá verde sem açúcar (200ml) | • Ovos: ${isMale ? '150g' : '100g'}<br>• Pão Integral: 50g<br>• Fruta: 100g<br>• Chia: 10g | **~${isMale ? '420' : '340'} kcal**<br>P: ${isMale ? '28g' : '20g'} • C: 35g • G: 14g |
-| **2. Lanche da Manhã (Colação)** | 10:00 | • Iogurte natural desnatado / grego zero (1 pote)<br>• Mix de castanhas e nozes picadas (1 colher de sopa)<br>• Maçã pequena com casca (1 unid.) | • Iogurte: 160g<br>• Castanhas: 15g<br>• Fruta: 100g | **~200 kcal**<br>P: 13g • C: 22g • G: 7g |
-| **3. Almoço** | 12:30 | • Peito de frango grelhado ou filé de tilápia (1 filé grande)<br>• Arroz integral cozido (4 colheres de sopa rasas)<br>• Feijão carioca em concha média (1 concha)<br>• Legumes no vapor (brócolis, abobrinha, cenoura)<br>• Salada crua de folhas verdes à vontade (rúcula, alface, agrião)<br>• Azeite de oliva extravirgem (1 colher de sobremesa) | • Proteína: 160g<br>• Arroz: 100g<br>• Feijão: 90g<br>• Legumes: 130g<br>• Folhas: à vontade<br>• Azeite: 7ml | **~540 kcal**<br>P: 48g • C: 52g • G: 14g |
-| **4. Lanche da Tarde (Pré-Treino)** | 16:30 | • Whey Protein Isolado ou Concentrado 80% (1 scoop)<br>• Banana prata fatiada (1 unid.)<br>• Aveia em flocos finos (1 colher de sopa cheia)<br>• Canela em pó a gosto + Água gelada (200ml) | • Whey: 30g<br>• Banana: 80g<br>• Aveia: 20g | **~280 kcal**<br>P: 26g • C: 34g • G: 3g |
-| **5. Jantar** | 20:00 | • Filé de peito de frango ou patinho moído grelhado<br>• Batata-doce ou abóbora cabotiá cozida (3 fatias pequenas)<br>• Mix de vegetais grelhados (abobrinha, vagem, tomate)<br>• Salada verde com gotas de limão e ervas finas<br>• Azeite de oliva extravirgem (1 colher de chá) | • Proteína: 150g<br>• Batata/Abóbora: 100g<br>• Vegetais: 140g<br>• Azeite: 5ml | **~440 kcal**<br>P: 44g • C: 36g • G: 11g |
-| **6. Ceia (Opcional)** | 22:30 | • Chá calmante (Camomila, Melissa ou Mulungu) sem açúcar<br>• Sementes de abóbora tostadas ou 2 nozes | • Chá: 200ml<br>• Nozes/Sementes: 10g | **~70 kcal**<br>P: 2g • C: 2g • G: 6g |
+#### 1. Café da Manhã / Desjejum (07:00) • Meta: ~${isMale ? '420' : '340'} kcal (P: ${isMale ? '28g' : '20g'} • C: 35g • G: 14g)
+- **Opção 1 (Tradicional):** ${isMale ? '3' : '2'} Ovos mexidos (${isMale ? '150g' : '100g'}) + ${isMale ? '2 fatias' : '1 fatia'} de Pão 100% integral (${isMale ? '50g' : '25g'}) + 100g de Mamão Papaia com 10g de Sementes de Chia + Café preto sem açúcar.
+- **Opção 2 (Prática):** Shake Matinal: 1 pote de Iogurte Grego Natural Zero (120g) batido com ${isMale ? '25g' : '15g'} de Whey Protein, 1 Banana média (80g) e 20g de Aveia em Flocos Finos.
+- **Opção 3 (Alternativa):** Panqueca Proteica de Aveia: 2 Ovos (${isMale ? '+ 2 claras' : ''}) batidos com 30g de Aveia em flocos e canela, recheada com 100g de Morangos frescos e 10g de Pasta de Amendoim Integral.
+
+#### 2. Lanche da Manhã / Colação (10:00) • Meta: ~200 kcal (P: 13g • C: 22g • G: 7g)
+- **Opção 1 (Tradicional):** 1 pote de Iogurte Natural Desnatado (160g) + 15g de Mix de Castanhas e Nozes picadas + 1 Maçã pequena (100g).
+- **Opção 2 (Prática):** 1 Barra de Proteína Funcional (sem adição de açúcar) de 45g (~13g proteína) + 1 Tangerina/Mexerica fresca (100g).
+- **Opção 3 (Alternativa):** 1 Pão Sírio Integral pequeno (30g) recheado com 2 colheres de sopa de Queijo Cottage zero (50g) e orégano + 1 Kiwi fresco (80g).
+
+#### 3. Almoço (12:30) • Meta: ~540 kcal (P: 48g • C: 52g • G: 14g)
+- **Opção 1 (Tradicional):** 160g de Peito de Frango grelhado + 100g de Arroz Integral cozido + 90g de Feijão Carioca + 130g de Brócolis/Legumes no vapor + Salada de folhas verdes à vontade + 7ml de Azeite de Oliva Extravirgem.
+- **Opção 2 (Prática):** 170g de Filé de Tilápia ou Merluza assada com ervas + 140g de Batata-Doce cozida ou assada em cubos + Mix de Tomate, Pepino e Rúcula à vontade + 7ml de Azeite de Oliva Extravirgem.
+- **Opção 3 (Alternativa):** 150g de Patinho bovino moído refogado com abobrinha + 130g de Mandioca/Aipim cozido + 1 concha rasa de Lentilha cozida (80g) + Salada crua colorida com limão e 5g de Sementes de Girassol.
+
+#### 4. Lanche da Tarde / Pré-Treino (16:30) • Meta: ~280 kcal (P: 26g • C: 34g • G: 3g)
+- **Opção 1 (Tradicional):** 1 scoop de Whey Protein 80% (30g) diluído em 200ml de água gelada + 1 Banana prata média fatiada (80g) + 20g de Aveia em Flocos Finos e canela.
+- **Opção 2 (Prática):** Sanduíche Pré-Treino: 2 fatias de Pão Integral (50g) recheadas com 80g de Peito de Frango desfiado temperado com açafrão e folhas de espinafre.
+- **Opção 3 (Alternativa):** Tigela Funcional: 150g de Iogurte Desnatado de Alta Proteína + 100g de Frutas Vermelhas (Morangos/Mirtilos) + 25g de Granola sem açúcar / sem glúten.
+
+#### 5. Jantar (20:00) • Meta: ~440 kcal (P: 44g • C: 36g • G: 11g)
+- **Opção 1 (Tradicional):** 150g de Filé de Frango grelhado em tiras + 120g de Abóbora Cabotiá assada com alecrim + 140g de Mix de Vegetais grelhados (abobrinha, vagem, tomate) + 5ml de Azeite Extravirgem.
+- **Opção 2 (Prática):** Omelete com 3 Ovos + 60g de Frango desfiado ou Atum em água sólido + Salada de folhas variadas com cenoura ralada + 100g de Batata-Inglesa cozida.
+- **Opção 3 (Alternativa):** 160g de Filé de Salmão ou Atum fresco grelhado (reduzir azeite) + 120g de Quinoa real cozida com ervas + Salada morna de aspargos e brócolis ao vapor.
+
+#### 6. Ceia / Chá Noturno (22:30) • Meta: ~70 kcal (P: 2g • C: 2g • G: 6g)
+- **Opção 1 (Tradicional):** 200ml de Chá Calmante (Camomila com Melissa) sem açúcar + 2 Nozes inteiras ou 6 Castanhas de Caju (10g).
+- **Opção 2 (Prática):** 200ml de Infusão de Mulungu / Passiflora com gotas de própolis + 1 colher de sobremesa de Sementes de Abóbora torradas sem sal (10g).
+- **Opção 3 (Alternativa):** 100ml de Leite Vegetal de Amêndoas aquecido com canela e raspas de noz-moscada + 1 castanha-do-pará (5g).
 
 ---
 

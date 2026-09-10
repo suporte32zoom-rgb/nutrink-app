@@ -216,11 +216,11 @@ export const MealPlanEditor: React.FC<MealPlanEditorProps> = ({
           </button>
 
           <button
-            onClick={() => onOpenNutriaWithPrompt(`Nutria, refine este plano alimentar para ${patient.name} mantendo a meta de ${currentPlan.targetCalories} kcal, distribuindo 2.0g/kg de proteína e adaptando as preferências alimentares.`)}
+            onClick={() => onOpenNutriaWithPrompt(`Nutria, elabore um plano alimentar 100% exclusivo para ${patient.name}, construído do zero a partir da anamnese, respeitando a meta prescrita de ${currentPlan.targetCalories} kcal com exatamente 3 opções isoenergéticas por refeição (Opção 1 - Tradicional, Opção 2 - Prática, Opção 3 - Alternativa) e conciliação exata de 100% dos macronutrientes.`)}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#220743] hover:bg-[#2f0b5a] text-fuchsia-200 border border-fuchsia-500/40 rounded-xl text-xs font-bold transition-all"
           >
             <Sparkles className="w-3.5 h-3.5 text-fuchsia-300" />
-            <span>Otimizar com NUTRIA</span>
+            <span>Otimizar com NÚTRIA</span>
           </button>
         </div>
       </div>
