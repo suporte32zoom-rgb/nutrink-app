@@ -12,6 +12,17 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   });
 }
 
+// Ativando o Armazenamento Persistente Seguro no Navegador do Cliente
+if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().then((isPersistent) => {
+    if (isPersistent) {
+      console.log("🔒 [NutrinK] Proteção Ativa: O navegador prometeu NUNCA apagar os dados do app automaticamente.");
+    } else {
+      console.log("⚠️ [NutrinK] O navegador recusou a persistência automática de dados.");
+    }
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
