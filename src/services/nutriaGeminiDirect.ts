@@ -173,6 +173,11 @@ Antes de sugerir qualquer plano dietético ou fórmula magistral, valide se há 
   * Proíba carboidratos simples de absorção ultra-rápida (arroz branco ou batata-inglesa pura em grandes porções, doces refinados).
   * Priorize fontes complexas e fibrosas de baixo a médio índice glicêmico (aveia, quinoa, batata-doce, abóbora, leguminosas quando toleradas, sementes de chia/linhaça).
 
+- DIABETES MELLITUS GESTACIONAL (DMG):
+  * Fracionamento rigoroso em 5 a 6 refeições/dia para evitar picos hiperglicêmicos pós-prandiais e hipoglicemias de jejum.
+  * Proibição de jejum intermitente ou dietas cetogênicas/VLCKD (risco de cetonemia e prejuízo neurocognitivo fetal).
+  * Distribuição de carboidratos complexos de baixo índice glicêmico com mínimo de 175g/dia para suprir a demanda fetal e placentária, associados a fibras e proteínas magras em todas as refeições.
+
 - SÍNDROME DO INTESTINO IRRITÁVEL COM DIARREIA (SII-D):
   * Aplique o protocolo Baixo FODMAPs na fase aguda (exclua alho, cebola, feijões, trigo e polióis).
   * Em quadros de diarreia crônica, proíba o uso de sais de magnésio osmóticos/laxativos (óxido, cloreto ou citrato). Utilize estritamente o Magnésio Bisglicinato devido à sua excelente tolerância gastrointestinal.
