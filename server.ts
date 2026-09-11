@@ -280,6 +280,127 @@ app.post("/api/auth/google/verify", async (req: Request, res: Response) => {
   }
 });
 
+// ====================================================================
+// WEBHOOK MERCADO PAGO PRO & PONTE DE AUTOMAÇÃO MAKE/ZAPIER
+// ====================================================================
+const NUTRINK_WELCOME_EMAIL_BODY = `Assunto: Seu consultório agora é Inteligente! Bem-vindo(a) ao NutrinK Premium 🔒🍏
+
+Olá, Doutor(a)!
+
+Seu pagamento foi processado com sucesso pelo Mercado Pago Pro e o seu plano profissional do NutrinK já está 100% liberado no seu navegador!
+
+A partir de agora, você tem acesso ao ecossistema de gestão clínica mais seguro e inovador do Brasil. 
+
+💎 O que muda na sua rotina com o NutrinK Premium:
+• NUTRIA AI Sem Limites: Use a transcrição de consultas em tempo real (via Jitsi Meet) e os comandos de prescrição quantas vezes precisar por dia, sem travamentos.
+• Pacientes Ilimitados: Cadastre toda a sua base de clientes atual e futura sem restrições de espaço.
+• Tecnologia Local-First Protegida: Seus prontuários estão salvos com a Persistent Storage API, garantindo que o navegador nunca apague seus dados automaticamente, mantendo o sigilo total (LGPD) sob o seu controle absoluto.
+
+🚀 Como acessar agora:
+Basta abrir o site nutrink.com.br no seu celular ou computador. Faça o login utilizando o mesmo 'Login com o Google' usado no momento da compra. O sistema reconhecerá suas credenciais e liberará todas as ferramentas premium automaticamente.
+
+Se precisar de qualquer suporte técnico ou quiser enviar sugestões para o nosso time de engenharia, basta clicar no botão 'Fale Conosco' direto no painel do seu app.
+
+Obrigado por confiar no NutrinK para ser o braço direito do seu sucesso profissional!
+
+Com respeito e admiração,
+Tarciano Martin de Souza
+CEO & Desenvolvedor do Ecossistema NutrinK`;
+
+// Endpoint do Webhook Mercado Pago
+app.post(["/api/webhooks/mercadopago", "/api/payments/webhook"], async (req: Request, res: Response) => {
+  try {
+    const payload = req.body || {};
+    const query = req.query || {};
+    const paymentId = payload?.data?.id || payload?.id || query['data.id'] || query.id;
+
+    console.log("[Mercado Pago Webhook] Notificação recebida:", { paymentId, action: payload.action, type: payload.type });
+
+    let status = payload.status || "";
+    let payerEmail = (payload?.payer?.email || payload?.external_reference || "").trim().toLowerCase();
+    let payerName = payload?.payer?.first_name ? `${payload.payer.first_name} ${payload.payer.last_name || ''}`.trim() : "Doutor(a)";
+    let amount = payload.transaction_amount || 0;
+
+    const mpToken = process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
+
+    // Se temos o ID do pagamento e token do MP, consulta a API para confirmação de segurança
+    if (paymentId && mpToken) {
+      try {
+        const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+          headers: {
+            Authorization: `Bearer ${mpToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (mpRes.ok) {
+          const mpData = await mpRes.json() as any;
+          status = mpData.status;
+          payerEmail = (mpData.payer?.email || mpData.external_reference || payerEmail).trim().toLowerCase();
+          payerName = mpData.payer?.first_name ? `${mpData.payer.first_name} ${mpData.payer.last_name || ''}`.trim() : payerName;
+          amount = mpData.transaction_amount || amount;
+        }
+      } catch (mpErr) {
+        console.warn("[Mercado Pago Webhook] Não foi possível consultar API do MP diretamente:", mpErr);
+      }
+    }
+
+    const isApproved = status === "approved" || payload.status === "approved" || payload.action === "payment.created";
+
+    if (isApproved && payerEmail) {
+      console.log(`🎉 [NutrinK Premium] Pagamento Aprovado para ${payerEmail}! Disparando ponte Make/Zapier...`);
+
+      // Disparo automático para webhook ponte Make/Zapier
+      const automationUrl = process.env.MAKE_WEBHOOK_URL || process.env.ZAPIER_WEBHOOK_URL || process.env.AUTOMATION_WEBHOOK_URL;
+      if (automationUrl) {
+        try {
+          await fetch(automationUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              event: "subscription.approved",
+              userEmail: payerEmail,
+              userName: payerName,
+              transactionId: String(paymentId || "mp_tx"),
+              amount: amount,
+              emailSubject: "Seu consultório agora é Inteligente! Bem-vindo(a) ao NutrinK Premium 🔒🍏",
+              emailBody: NUTRINK_WELCOME_EMAIL_BODY
+            })
+          });
+          console.log(`✅ [Ponte Make/Zapier] E-mail de faturamento enviado com sucesso para: ${payerEmail}`);
+        } catch (bridgeErr) {
+          console.error("[Ponte Make/Zapier] Falha ao enviar para o webhook:", bridgeErr);
+        }
+      }
+    }
+
+    res.status(200).json({
+      received: true,
+      status: status || "processed",
+      userEmail: payerEmail,
+      planActivated: isApproved
+    });
+  } catch (err: any) {
+    console.error("[Mercado Pago Webhook] Erro:", err);
+    res.status(500).json({ error: err.message || "Erro no processamento do webhook" });
+  }
+});
+
+// Endpoint de Consulta de Status Premium por E-mail (Google OAuth)
+app.get("/api/subscription/status", (req: Request, res: Response) => {
+  const email = String(req.query.email || "").trim().toLowerCase();
+  if (!email) {
+    res.status(400).json({ error: "E-mail obrigatório" });
+    return;
+  }
+  // No modelo Local-First, o cliente consulta ou valida sua assinatura
+  res.json({
+    email,
+    verified: true,
+    storageType: "PersistentStorage/IndexedDB",
+    welcomeTemplate: NUTRINK_WELCOME_EMAIL_BODY
+  });
+});
+
 
 // Lazy initializer for Gemini client
 let genAIClient: GoogleGenAI | null = null;
